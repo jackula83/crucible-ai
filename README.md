@@ -11,30 +11,40 @@ Proscenium is a storytelling app, where it keeps a world log of events and use a
 Using Proscenium and Typescript as an example, the aim is:
 
 ```ts
-// arrange
-const story = await sut.createNewStory("The Long Weekend");
-await sut.memory("Bob is at the casino");
-await sut.memory("Jane is at home");
-crucible.load(story.getLogs());
+inferenceIt("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
+  // arrange
+  const story = await sut.createNewStory("The Long Weekend");
+  await sut.memory("Bob is at the casino");
+  await sut.memory("Jane is at home");
+  crucible.load(story.getLogs());
 
-// act
-const response = await sut.input("Jane looks for Bob");
+  // act
+  const response = await sut.input("Jane looks for Bob");
 
-// assert
-await expect(response).toMeet(
-  crucible.coherence(
-    "Jane won't find Bob, because they aren't in the same place",
-    { runs: 20, threshold: 0.95 }
-  )
-);
+  // assert
+  expect(
+    await crucible.coherent(
+      response,
+      "Jane won't find Bob, because they aren't in the same place"
+    )
+  ).toBe(true);
+});
 ```
+
+`inferenceIt` re-runs the whole test body (arrange, act, assert) 20 times in parallel and goes green when the pass rate is at least 0.95 — pass^k-style reliability as a CI gate, not single-shot luck. Assertions stay native (`toBe(true)`); when a run fails, Crucible prints the judge's reasoning. Omit `runs` and it's a plain single-shot test.
 
 ## Alternatives
 
-**[promptfoo](https://www.promptfoo.dev)** is the closest neighbour and the difference is philosophical. Promptfoo is config-first: your test suite is a YAML file, the CLI is the primary surface, and the unit of work is an eval run across a matrix of prompts and providers. Crucible is code-first: the test is a function in your existing test suite, the system under test is your own engine instantiated in-process, and the unit of work is a single assertion inside a red-green loop.
+**[promptfoo](https://www.promptfoo.dev)** is the closest neighbour and the difference is philosophical. Promptfoo is config-first: the test suite is a YAML file, the CLI is the primary surface, and the unit of work is an eval run across a matrix of prompts and providers. Crucible is code-first: the test is a function in an existing test suite, the system under test is the developer's own engine instantiated in-process, and the unit of work is a single assertion inside a red-green loop.
 
-The practical consequence is state. Promptfoo's model is prompt in, output out, assert on the output. You can pass a world log through template variables and a custom rubric prompt, and people do, but it is a workaround rather than a concept the framework has. Crucible treats the world as a first-class input because that is the only way to express whether a character *should* know something.
+The practical consequence is state. Promptfoo's model is prompt in, output out, assert on the output. State can be passed through template variables and a custom rubric prompt, and people do, but it is a workaround rather than a concept the framework has. Crucible treats state as a first-class input because that is the only way to express whether a character *should* know something.
 
 Worth noting that promptfoo was acquired by OpenAI in March 2026 and is being integrated into their Frontier platform. It remains open source and the team committed to continuity. Its roadmap is enterprise security and red teaming, which is a real need and not this one.
 
 **[DeepEval](https://deepeval.com)** has the strongest metric library going, and G-Eval is a genuinely good primitive. It shipped a TypeScript SDK in July 2026, so the old "Python-only" complaint is out of date. Parity is another matter: LLM-as-a-judge metrics and fully local evaluation still live in the Python package, and the team is refreshingly direct that TypeScript follows Python rather than standing alongside it. That is a reasonable call for them and a bad fit for anyone whose production system is not Python.
+
+**[vitest-evals](https://github.com/getsentry/vitest-evals)** (Sentry) and **[evalite](https://github.com/mattpocock/evalite)** are the closest ergonomic neighbours in TypeScript: evals that live in or next to the unit-test workflow, local-first and free. Both score a stateless input/output pair against a dataset or scorer; neither has a concept of state as an assertion input, nor of a reliability threshold across repeated runs.
+
+**[semantic-expect](https://github.com/agorischek/semantic-expect)** deserves a nod as prior art: LLM-judged matchers for Jest/Vitest with an N-run, pass-count configuration — the same probabilistic-assertion instinct. It is early, stateless, and tied to OpenAI.
+
+**[Braintrust](https://www.braintrust.dev)** and **[LangSmith](https://docs.langchain.com/langsmith)** are platform plays — datasets, experiments, traces, and dashboards, with test-runner integrations attached. Good fits for teams that want a hosted eval loop; Crucible is a library for teams that want assertions in a test suite.
