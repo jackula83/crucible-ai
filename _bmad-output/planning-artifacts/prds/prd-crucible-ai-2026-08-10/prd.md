@@ -64,7 +64,7 @@ Primary personas: developers of AI storytellers, book-writing assistants, rolepl
 - **Judge** — the AI agent that evaluates a claim by following the instruction schema, called via the configured provider.
 - **Instruction schema** — language-agnostic markdown rule files defining *how* the judge evaluates each assertion type; the portable, non-deterministic core of Crucible.
 - **Run** — one full execution of an inference test's body (arrange → act → assert).
-- **Inference test** — a test declared with `inferenceIt`, executed as one or more runs.
+- **Inference test** — a test declared with `crucible.it()`, executed as one or more runs.
 - **Threshold** — minimum pass rate (passed runs ÷ total runs) for the inference test to be green, expressed as a decimal fraction in [0, 1] (e.g. `0.95`) everywhere; pass^k-style semantics.
 - **Provider** — the API service the judge is called through (MVP: OpenRouter), set in the config file.
 - **Config file** — `crucible.config.json` at project root: provider, model, provider-specific `meta` passthrough, verbosity defaults.
@@ -73,10 +73,10 @@ Primary personas: developers of AI storytellers, book-writing assistants, rolepl
 
 ### 4.1 Probabilistic Test Runner
 
-**Description:** `inferenceIt` extends the test framework's `it`: the whole test body (arrange, act, assert) is re-executed for the configured number of runs, and the inference test passes when the pass rate meets the threshold. Repetition wraps the *test*, not the assertion — each run re-arranges state fresh, so mutation during a run never leaks into the next, and multiple assertions inside one body form a natural AND. Runs execute in parallel by default: proper tests build an isolated SUT per arrange, so runs share nothing. Realizes UJ-1, UJ-2.
+**Description:** `crucible.it()` extends the test framework's `it`: the whole test body (arrange, act, assert) is re-executed for the configured number of runs, and the inference test passes when the pass rate meets the threshold. Repetition wraps the *test*, not the assertion — each run re-arranges state fresh, so mutation during a run never leaks into the next, and multiple assertions inside one body form a natural AND. Runs execute in parallel by default: proper tests build an isolated SUT per arrange, so runs share nothing. Realizes UJ-1, UJ-2.
 
 #### FR-1: Declare an inference test
-Developer can declare a test with `inferenceIt(name, { runs?, threshold? }, body)` alongside ordinary Jest tests in the same file.
+Developer can declare a test with `crucible.it(name, { runs?, threshold? }, body)` alongside ordinary Jest tests in the same file. The runner lives on the `crucible` namespace, matching `crucible.load()` and `crucible.coherent()`; each language binding exposes the idiomatic equivalent (see §4.6).
 
 **Consequences (testable):**
 - An inference test with `{ runs: 20, threshold: 0.95 }` executes its body 20 times and passes iff ≥ 19 runs pass.
@@ -169,7 +169,7 @@ Developer can set output detail in `crucible.config.json` and override it per in
 
 ### 4.6 Cross-Language Foundation
 
-**Description:** Vision-level feature shipped as an architectural property of MVP, not as new language ports: the deterministic shell (run orchestration, aggregation, framework binding, config, output) is language-specific and ported per ecosystem; the instruction schema is the non-deterministic core, written once. MVP delivers the TS/Jest shell; FR-6 validates the split. Test-level repetition is portable everywhere (JUnit 5 `@RepeatedTest`, xUnit custom attributes, pytest markers — see addendum).
+**Description:** Vision-level feature shipped as an architectural property of MVP, not as new language ports: the deterministic shell (run orchestration, aggregation, framework binding, config, output) is language-specific and ported per ecosystem; the instruction schema is the non-deterministic core, written once. MVP delivers the TS/Jest shell; FR-6 validates the split. Test-level repetition ports to every target ecosystem in its idiomatic form — xUnit `[CrucibleFact(Runs, Threshold)]`, JUnit 5 `@CrucibleTest(runs, threshold)`, pytest `@crucible.it(runs, threshold)` — see addendum for mechanisms and prior art.
 
 **Out of Scope:** Python, .NET, Java shells; Vitest/other JS-runner bindings. [NON-GOAL for MVP — Vitest is likely the cheapest second binding; OQ-4.]
 
@@ -187,7 +187,7 @@ Developer can set output detail in `crucible.config.json` and override it per in
 
 ### 6.1 In Scope
 
-- TypeScript library, Jest binding (`inferenceIt`).
+- TypeScript library, Jest binding (`crucible.it()`).
 - `crucible.load()` / state append; string-based state contract.
 - `crucible.coherent(response, claim)` boolean assertion.
 - Instruction schema for `coherent`; judge execution via OpenRouter.

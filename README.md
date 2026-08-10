@@ -11,7 +11,7 @@ Proscenium is a storytelling app, where it keeps a world log of events and use a
 Using Proscenium and Typescript as an example, the aim is:
 
 ```ts
-inferenceIt("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
+crucible.it("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
   // arrange
   const story = await sut.createNewStory("The Long Weekend");
   await sut.memory("Bob is at the casino");
@@ -31,7 +31,81 @@ inferenceIt("Jane looks for Bob", { runs: 20, threshold: 0.95 }, async () => {
 });
 ```
 
-`inferenceIt` re-runs the whole test body (arrange, act, assert) 20 times in parallel and goes green when the pass rate is at least 0.95 — pass^k-style reliability as a CI gate, not single-shot luck. Assertions stay native (`toBe(true)`); when a run fails, Crucible prints the judge's reasoning. Omit `runs` and it's a plain single-shot test.
+`crucible.it()` re-runs the whole test body (arrange, act, assert) 20 times in parallel and goes green when the pass rate is at least 0.95 — pass^k-style reliability as a CI gate, not single-shot luck. Assertions stay native (`toBe(true)`); when a run fails, Crucible prints the judge's reasoning. Omit `runs` and it's a plain single-shot test.
+
+The same shape ports to each ecosystem's idiomatic form (roadmap — v1 is TypeScript/Jest):
+
+<details>
+<summary><b>C# (xUnit)</b></summary>
+
+```csharp
+[CrucibleFact(Runs = 20, Threshold = 0.95)]
+public async Task JaneLooksForBob()
+{
+    // arrange
+    var story = await sut.CreateNewStory("The Long Weekend");
+    await sut.Memory("Bob is at the casino");
+    await sut.Memory("Jane is at home");
+    Crucible.Load(story.GetLogs());
+
+    // act
+    var response = await sut.Input("Jane looks for Bob");
+
+    // assert
+    Assert.True(await Crucible.Coherent(
+        response,
+        "Jane won't find Bob, because they aren't in the same place"));
+}
+```
+
+</details>
+
+<details>
+<summary><b>Java (JUnit 5)</b></summary>
+
+```java
+@CrucibleTest(runs = 20, threshold = 0.95)
+void janeLooksForBob() throws Exception {
+    // arrange
+    var story = sut.createNewStory("The Long Weekend");
+    sut.memory("Bob is at the casino");
+    sut.memory("Jane is at home");
+    Crucible.load(story.getLogs());
+
+    // act
+    var response = sut.input("Jane looks for Bob");
+
+    // assert
+    assertTrue(Crucible.coherent(
+        response,
+        "Jane won't find Bob, because they aren't in the same place"));
+}
+```
+
+</details>
+
+<details>
+<summary><b>Python (pytest)</b></summary>
+
+```python
+@crucible.it(runs=20, threshold=0.95)
+async def test_jane_looks_for_bob():
+    # arrange
+    story = await sut.create_new_story("The Long Weekend")
+    await sut.memory("Bob is at the casino")
+    await sut.memory("Jane is at home")
+    crucible.load(story.get_logs())
+
+    # act
+    response = await sut.input("Jane looks for Bob")
+
+    # assert
+    assert await crucible.coherent(
+        response, "Jane won't find Bob, because they aren't in the same place"
+    )
+```
+
+</details>
 
 ## Alternatives
 

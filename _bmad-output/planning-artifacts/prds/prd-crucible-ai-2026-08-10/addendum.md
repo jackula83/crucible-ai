@@ -4,7 +4,7 @@ Depth that belongs downstream (architecture / solution design) or earned a place
 
 ## Architecture direction (user-volunteered, 2026-08-10)
 
-Two-part split (illustrated with the final API: `inferenceIt('...', { runs: 20, threshold: 0.95 }, ...)` wrapping `crucible.coherent(response, 'Jane and Bob are not in the same room')`):
+Two-part split (illustrated with the final API: `crucible.it('...', { runs: 20, threshold: 0.95 }, ...)` wrapping `crucible.coherent(response, 'Jane and Bob are not in the same room')`):
 
 - **Deterministic shell** — language-specific, ported per ecosystem (TS/Jest first; Python, .NET, Java later). Runs the test N times (`runs: 20`), aggregates, checks pass rate ≥ threshold (0.95) — see Runs semantics. Owns test-framework integration (originally sketched as custom matchers like `toMeet` — superseded; see Assertion surface).
 - **Non-deterministic core** — language-agnostic **instruction schema**: markdown rule files an AI agent (e.g. Claude) follows to actually evaluate the semantic claim ("Jane and Bob are not in the same room") against the loaded state. Function calls map to instruction sets. Judge = agent executing instructions, not a hardcoded metric.
@@ -22,14 +22,19 @@ Two-part split (illustrated with the final API: `inferenceIt('...', { runs: 20, 
 ## Runs semantics — test-level repetition (decided 2026-08-10)
 
 - Rejected: `{runs, threshold}` on the assertion (`coherent(...)`) — would either judge one response 20× (measures the judge, not the SUT) or require re-invoking act inside the assertion, which breaks when state mutates after input.
-- Decided: repetition wraps the whole test — `inferenceIt('name', { runs: 20, threshold: 0.95 }, async () => { arrange; act; assert })`. Each run re-arranges state fresh; assertions inside are single-shot; pass rate across runs ≥ threshold → green. Matches τ-bench pass^k measurement of SUT reliability.
-- Portability of test-level repetition: JUnit 5 `@RepeatedTest` native + custom extension for threshold aggregation; xUnit custom `[InferenceFact(Runs, Threshold)]` attribute (prior art: xRetry, NUnit `[Repeat]`/`[Retry]`); pytest custom marker/plugin. Concept ports cleanly everywhere.
+- Decided: repetition wraps the whole test — `crucible.it('name', { runs: 20, threshold: 0.95 }, async () => { arrange; act; assert })`. Each run re-arranges state fresh; assertions inside are single-shot; pass rate across runs ≥ threshold → green. Matches τ-bench pass^k measurement of SUT reliability. (Runner named `crucible.it()` — decided 2026-08-10, replacing the earlier `inferenceIt` working name — so the whole surface hangs off one `crucible` namespace.)
+- Per-language binding sketches (each ecosystem's idiomatic test-repetition mechanism):
+  - **Jest/Vitest (TS)** — `crucible.it(name, { runs, threshold }, body)`: plain function that registers `it()` and loops/aggregates internally. No framework extension API needed.
+  - **xUnit (.NET)** — `[CrucibleFact(Runs = 20, Threshold = 0.95)]` custom attribute on the test method; implemented via xUnit's extensible `FactAttribute`/test-case discovery (prior art: xRetry, NUnit `[Repeat]`/`[Retry]`).
+  - **JUnit 5 (Java)** — `@CrucibleTest(runs = 20, threshold = 0.95)` composed annotation; implemented as a `TestTemplateInvocationContextProvider` extension (same mechanism as native `@RepeatedTest`) plus threshold aggregation.
+  - **pytest (Python)** — `@crucible.it(runs=20, threshold=0.95)` decorator (or marker + plugin hook); prior art: pytest-repeat.
+  - Concept ports cleanly everywhere; the shell owns run orchestration in all cases.
 
 ## Assertion surface — native, boolean (decided 2026-08-10)
 
 - No custom matchers. `crucible.coherent(response, claim)` → `Promise<boolean>`; asserted with each framework's native primitive (`expect(x).toBe(true)`, `Assert.True`, `assertTrue`, `assert`). `toMeet()` from the original README sketch is dropped.
 - Rationale: eliminates per-framework matcher maintenance; assertion layer ports for free. Cost: native failure message is bare ("expected true") — mitigated: the Crucible engine prints judge diagnostics on failure; the framework asserts, Crucible explains.
-- `runs` optional on `inferenceIt` — omitted = 1 run (smoke mode, cheap CI lane).
+- `runs` optional on `crucible.it()` — omitted = 1 run (smoke mode, cheap CI lane).
 - Parallel runs by default — proper tests build a fresh isolated SUT per arrange, so runs don't share state. Serial fallback configurable post-MVP.
 
 ## Verbosity (decided 2026-08-10)
