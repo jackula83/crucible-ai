@@ -195,7 +195,7 @@ Developer can set output detail in `crucible.config.json` and override it per in
 - Failure diagnostics + verbosity ladder incl. debug level.
 - Parallel run execution.
 - Docs: getting started, config reference (OpenRouter page), instruction-schema explainer.
-- CI: GitHub Actions; e2e against funded OpenRouter account.
+- CI: GitHub Actions (lint, typecheck, unit only — no provider traffic or secrets); e2e against funded OpenRouter account runs locally (`e2e/core` in pre-commit, full suite via Makefile) per architecture AD-12.
 
 ### 6.2 Out of Scope for MVP
 
