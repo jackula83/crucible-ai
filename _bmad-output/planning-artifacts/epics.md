@@ -1,0 +1,361 @@
+---
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics', 'step-03-create-stories', 'step-04-final-validation']
+inputDocuments:
+  - _bmad-output/planning-artifacts/prds/prd-crucible-ai-2026-08-10/prd.md
+  - _bmad-output/planning-artifacts/prds/prd-crucible-ai-2026-08-10/addendum.md
+  - _bmad-output/planning-artifacts/architecture/architecture-crucible-ai-2026-08-10/ARCHITECTURE-SPINE.md
+---
+
+# crucible-ai - Epic Breakdown
+
+## Overview
+
+This document provides the complete epic and story breakdown for crucible-ai, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
+
+## Requirements Inventory
+
+### Functional Requirements
+
+FR1: Developer can declare an inference test with `crucible.it(name, { runs?, threshold? }, body)` alongside ordinary Jest tests; passes iff passed runs ≥ ⌈threshold × runs − 1e-9⌉ (integer-safe); omitted `runs` → 1 (smoke mode); omitted `threshold` → 1.0; threshold validated to (0,1].
+FR2: Runs of one inference test execute concurrently by default (Promise.all inside a single registered `it()`); wall-clock bounded by slowest run plus orchestration overhead.
+FR3: Developer can load state via `crucible.load(string | string[])` during arrange; loaded state available to every judge call in the same run; state scoped per run under parallel execution (concurrent runs never observe each other's state); hand-authored or SUT-harvested strings treated identically.
+FR4: Developer can append state after acts within the same run; subsequent assertions judged against accumulated state; already-returned verdicts unaffected.
+FR5: Developer can call `crucible.coherent(response, claim)` and receive a boolean verdict of semantic coherence with the claim given loaded state; stateless mode (no state loaded) judges claim against response alone; knowledge-boundary (anti-omniscience) claims are first-class.
+FR6: Each assertion type's evaluation procedure is defined in a language-agnostic markdown instruction schema the judge executes; `coherent()` behaviour changes by editing its schema with no TypeScript change.
+FR7: Developer can configure provider, model, and provider-specific `meta` passthrough in `crucible.config.json`; unsupported provider fails fast at config load with actionable error; judge infrastructure failures (429/timeout/5xx) are recorded as errored runs, never semantic failures.
+FR8: On inference-test failure, Crucible prints pass rate vs threshold and, per failing run, the first failed assertion's claim, bounded response excerpt, and judge reasoning; errored runs render visually distinct from failed runs.
+FR9: Developer can set verbosity in `crucible.config.json` and override per invocation via `CRUCIBLE_VERBOSE` env var (env wins); levels: default (first error per failing run), full (all judge output), debug (engine init, run execution, provider traffic).
+
+### NonFunctional Requirements
+
+NFR1: API keys are supplied via provider-native environment variables only (`OPENROUTER_API_KEY` for MVP), never in `crucible.config.json`; the config file stays committable; `CRUCIBLE_` prefix reserved for crucible-owned variables.
+NFR2: Judge calls are metered spend — one judge call per assertion per run; judge cost scales linearly; no judge traffic outside explicit test execution.
+NFR3: Judge false-negatives are an accepted limitation, mitigated by narrow single-claim assertions; frontier models expected reliable at the narrow task.
+NFR4: Getting-started docs must include runs/threshold binomial-headroom guidance (a true-0.95 SUT fails `{runs: 20, threshold: 0.95}` ≈ 26% of executions).
+NFR5: Unasserted verdicts are the developer's responsibility (as with any async helper); documented as a gotcha, not tracked by the engine.
+
+### Additional Requirements
+
+- **No starter template** — greenfield hand-rolled package per the spine's Structural Seed (AD-2 layout: `src/bindings/`, `src/core/`, `src/providers/`, `schemas/`, `e2e/`, `docs/`).
+- AR1 (AD-1): Evaluation semantics live only in `schemas/*.md`; TypeScript never encodes judgment logic.
+- AR2 (AD-2/AD-9): Dependency direction enforced — core never imports adapters/bindings; only `core/config` calls `providers/registry`.
+- AR3 (AD-3): Registration inert; runner throws `CrucibleVerdictError` rendered solely by `core/report`; runner sets framework per-test timeout from run count and provider budget; bodies documented as re-entrant (fresh SUT per arrange).
+- AR4 (AD-4): Three-zone verdict — pass / fail / errored(inconclusive → test fails, reported as errored); run-status classification: body resolves → passed; `CrucibleError` kind `infra` → errored; any other rejection → failed.
+- AR5 (AD-5/AD-13): `core/state` owns the single AsyncLocalStorage holding `RunContext { state, verdicts, errors }`; access via accessors only; judge appends `VerdictRecord`/`ErrorRecord` before resolving; reporter renders exclusively from records at verdict time.
+- AR6 (AD-7): Judge = one stateless completion per assertion; schema as system prompt; strict JSON `{verdict, reasoning}`; parsing and unparseable→retryable classification live only in `core/judge`.
+- AR7 (AD-8): Provider port `complete(request, AbortSignal): Promise<string>`; adapter classifies retryable/fatal and declares its env var; core owns retry (3 attempts, exponential backoff + jitter); runner aborts sibling runs on first fatal, aborted runs discarded.
+- AR8 (AD-9): `config.get()` memoized, first invoked at first run execution; config load resolves adapter singleton and `effectiveVerbosity`.
+- AR9 (AD-11): Schemas ship in package, named per assertion (`coherent.md`), frontmatter carries name + output contract, versioned by package version.
+- AR10 (AD-12 as amended): CI (GitHub Actions) two lanes — PR lane = lint + typecheck + unit, zero provider traffic; main-merge lane additionally runs `make e2e-core` with `OPENROUTER_API_KEY` repo secret; local e2e manual-only (no pre-commit hook), split `e2e/core` + `e2e/ext`, Makefile targets `e2e-core`/`e2e-ext`/`e2e`; publish = `v*` tag → unit tests → `npm publish` with provenance via npm Trusted Publishing (OIDC) or `NPM_TOKEN` fallback; permitted CI secrets = npm credential + `OPENROUTER_API_KEY`.
+- AR11 (Stack): TypeScript 6.x; Node engines >=22, CI matrix 22/24; Jest 30 (peer, never dependency — globals reached lazily); tsdown dual ESM+CJS build; one `crucible` namespace, future bindings via subpath exports only.
+- AR12 (Conventions): kebab-case files; `CrucibleError` base with kind `config|usage|infra`; no `console.*` outside `core/report`; env access only in `core/config` + adapter key lookup; "state" terminology, never domain vocabulary.
+- AR13 (PRD §6.1): Docs deliverables — getting started (incl. NFR4 headroom guidance), OpenRouter config reference, instruction-schema explainer, unasserted-verdict gotcha.
+
+### UX Design Requirements
+
+N/A — library product, no UI. Terminal output contract is covered by FR8/FR9.
+
+### FR Coverage Map
+
+FR1: Epic 1 (declaration + smoke default) → Epic 2 (runs/threshold aggregation completes it)
+FR2: Epic 2 — parallel run execution
+FR3: Epic 2 — load state, per-run isolation
+FR4: Epic 2 — append state
+FR5: Epic 1 — coherence assertion
+FR6: Epic 1 — instruction-schema-driven judging
+FR7: Epic 1 — provider configuration, fail-fast, retry taxonomy
+FR8: Epic 3 — full failure-output contract (Epic 1 ships provisional print incl. judge reasoning)
+FR9: Epic 3 — verbosity ladder incl. debug
+
+## Epic List
+
+### Epic 1: First semantic assertion (walking skeleton)
+A developer can install crucible-ai, configure OpenRouter, and get a real semantic verdict inside a Jest test — `crucible.it()` smoke mode (single run), `crucible.coherent()`, schema-driven judge, fail-fast config, core retry taxonomy, and a minimal failure print that includes the judge's reasoning (not just the boolean). Proves the core bet — schema-driven judging — earliest and cheapest.
+**FRs covered:** FR1 (declare + smoke), FR5, FR6, FR7
+
+### Epic 2: Reliability measurement (stateful pass^k)
+A developer can arrange per-run state and gate CI on pass rate — full `{runs, threshold}` semantics, parallel execution, ALS state isolation (`load`/`append`), three-zone verdict, sibling abort on fatal. Runs/threshold binomial-headroom guidance (NFR4) is authored alongside `threshold` in this epic — load-bearing math, not deferred documentation.
+**FRs covered:** FR1 (runs/threshold aggregation), FR2, FR3, FR4
+
+### Epic 3: Diagnose, document & ship
+A developer can debug a failing CI run from terminal output alone, and the package is publicly consumable — full FR8 output contract, verbosity ladder incl. debug, docs set (incorporating the Epic 2 headroom guidance, OpenRouter reference, schema explainer, unasserted-verdict gotcha), fixture-driven local e2e via Makefile (manual, no pre-commit hook), `e2e-core` on the CI main-merge lane, a language-agnostic judge-conformance spike, and tag-triggered npm publish. The `e2e/core` critical-path test is a self-contained fixture-driven scenario: a checked-in fixture file (txt/json/md) establishes state, the test feeds input prompts and asserts semantic expectations — domain-agnostic, no external project dependency.
+**FRs covered:** FR8, FR9 (+ NFR4/NFR5 docs, AR10/AR13 ops)
+
+## Epic 1: First semantic assertion (walking skeleton)
+
+A developer can install crucible-ai, configure OpenRouter, and get a real semantic verdict inside a Jest test — smoke mode, schema-driven judge, fail-fast config, retry taxonomy, and a failure print that includes the judge's reasoning. Proves the core bet — schema-driven judging — earliest and cheapest.
+
+### Story 1.1: Install and configure Crucible
+
+As a developer,
+I want to install crucible-ai and configure it via `crucible.config.json`,
+So that misconfiguration fails fast with an actionable error before any judge spend.
+
+**Acceptance Criteria:**
+
+**Given** a fresh TS/Jest project with crucible-ai installed (scaffold: tsdown dual ESM+CJS build, TS 6.x strict, Node >=22, kebab-case layout per spine seed, CI workflow running lint+typecheck+unit)
+**When** a valid `crucible.config.json` (`provider`, `model`, optional `meta`, optional verbosity) exists at project root
+**Then** `config.get()` loads and validates it once (memoized), resolving the adapter singleton via `providers/registry` and `effectiveVerbosity` (env wins)
+**And** an unknown provider, missing model, or malformed file throws `CrucibleError` kind `config` with an actionable message at load — never mid-run
+**And** registration-time code paths never trigger config load (registration inert, AD-9)
+**And** no API key field is accepted in the config file (NFR1)
+
+### Story 1.2: Reliable judge connectivity via OpenRouter
+
+As a developer,
+I want judge requests sent through OpenRouter with retry on transient failures,
+So that provider flake doesn't produce false verdicts or wasted spend.
+
+**Acceptance Criteria:**
+
+**Given** the OpenRouter adapter implementing the port `complete(request, signal): Promise<string>`
+**When** a judge request succeeds
+**Then** raw completion text returns to core untouched (no parsing in the adapter, AD-8)
+**And** the adapter reads `OPENROUTER_API_KEY` from env (its declared var); a missing key is a fatal `config` error
+**When** the provider returns 429/timeout/5xx
+**Then** core retries max 3 attempts with exponential backoff + jitter, then surfaces `CrucibleError` kind `infra`, `retryable: true`
+**When** the provider returns 400/401/unknown-model
+**Then** the error is classified fatal and surfaces immediately without retry
+**And** `meta` config passes through to the request unmodified (FR7)
+
+### Story 1.3: Design the `coherent` instruction schema (spike)
+
+As a library author,
+I want `schemas/coherent.md` designed and validated against real judge models with no TypeScript involved,
+So that the language-agnostic core of Crucible is proven before any shell code binds to it.
+
+**Acceptance Criteria:**
+
+**Given** a scratch harness that is explicitly not library code (raw HTTP/curl or throwaway script against OpenRouter)
+**When** the schema is executed as system prompt with hand-built payloads (state + response + claim)
+**Then** a fixture matrix passes on at least two candidate judge models: coherent case → `true`, incoherent case (Jane/Bob canonical) → `false`, knowledge-boundary leak → `false`, stateless case (no state) judged on response alone
+**And** every reply parses as strict JSON `{verdict, reasoning}` with meaningful reasoning — format compliance measured across repeated calls, not one lucky sample
+**And** the schema file carries frontmatter (`name: coherent`, output contract) per AD-11, registry-ready
+**And** the schema contains no TypeScript-specific or provider-specific instructions — payload assembly order is documented in the schema itself so any language shell can reproduce it (AD-7)
+**And** model behaviour notes (which models comply, quirks, refusal rates) are recorded as input to the deferred judge-model guidance (OQ-6)
+
+### Story 1.4: First semantic verdict (smoke mode)
+
+As a developer,
+I want to write `crucible.it('name', body)` with `crucible.coherent(response, claim)` inside,
+So that I get a real semantic pass/fail in my Jest suite from a single run.
+
+**Acceptance Criteria:**
+
+**Given** a `crucible.it()` test with `runs`/`threshold` omitted
+**When** the suite runs
+**Then** exactly one Jest test registers and the body executes exactly once inside `state.enterRun` (ambient `RunContext`, AD-5)
+**And** `crucible.coherent(response, claim)` assembles one stateless completion — system prompt = `schemas/coherent.md` (the Story 1.3 artifact), user content = response + claim — parses strict JSON `{verdict, reasoning}` in `core/judge`, appends a `VerdictRecord`, and resolves the boolean (AD-7/AD-13)
+**And** with the PRD's canonical case (response places Jane and Bob together, claim says they can't meet) the verdict resolves `false`; the inverse resolves `true` (FR5)
+**And** editing `schemas/coherent.md` changes judge behaviour with zero TS changes (FR6)
+**And** calling `crucible.coherent()` outside a run scope fails fast with `CrucibleError` kind `usage`
+**And** an unparseable judge reply is classified retryable infra, never a verdict
+
+### Story 1.5: See why it failed
+
+As a developer,
+I want a failing or erroring smoke test to tell me what the judge thought,
+So that I can fix my engine or my claim without re-running blind.
+
+**Acceptance Criteria:**
+
+**Given** a smoke test whose assertion resolved `false`
+**When** the test fails
+**Then** the thrown `CrucibleVerdictError` message — rendered solely by `core/report` from run records — shows the claim, a bounded response excerpt, and the judge's reasoning
+**Given** a smoke test whose run errored (retries exhausted or fatal)
+**Then** output renders the run as *errored, not failed*, naming the infrastructure cause (FR7)
+**And** no module outside `core/report` writes to stdout/stderr (AR12)
+
+## Epic 2: Reliability measurement (stateful pass^k)
+
+A developer can arrange per-run state and gate CI on pass rate — full `{runs, threshold}` semantics, parallel execution, ALS state isolation, three-zone verdict, sibling abort on fatal, config-level defaults, and the load-bearing headroom math authored alongside.
+
+### Story 2.1: Repeat and gate on pass rate
+
+As a developer,
+I want `crucible.it(name, { runs, threshold }, body)` to execute the body N times in parallel and gate on the pass rate,
+So that I measure reliability, not single-shot luck.
+
+**Acceptance Criteria:**
+
+**Given** `{ runs: 20, threshold: 0.95 }`
+**When** the suite runs
+**Then** one Jest test registers; the body executes 20 times concurrently (`Promise.all`), each in its own `state.enterRun` scope
+**And** verdict follows the three-zone rule with `need = ⌈threshold × runs − 1e-9⌉`: passed ≥ need → green; passed + errored < need → fail; otherwise → errored-not-failed with infra causes named (AR4)
+**And** `Math.ceil`-bump cases verify exactly: `{runs: 20, threshold: 0.35}` needs 7, not 8
+**And** run-status classification: body resolves → passed; rejection with `CrucibleError` kind `infra` → errored; any other rejection → failed
+**And** `threshold: 0` or `> 1` rejected as `usage` error at declaration
+**And** the runner sets the framework per-test timeout from run count and provider budget (AR3)
+**And** wall-clock for 20 runs ≈ slowest run + overhead, not the sum (FR2)
+
+### Story 2.2: Arrange state per run
+
+As a developer,
+I want `crucible.load()` and `crucible.append()` to scope state to the current run,
+So that assertions are judged against the state each run actually arranged — even with 20 runs in flight.
+
+**Acceptance Criteria:**
+
+**Given** a body calling `crucible.load("Bob is at the casino; Jane is at home")` then asserting coherence
+**When** runs execute in parallel
+**Then** every judge call in a run sees only that run's accumulated state — concurrent runs never observe each other's (FR3; verified with a unit test that interleaves runs writing distinct state)
+**And** `crucible.append()` after an act includes the new state in subsequent judge calls of the same run; already-resolved verdicts are unaffected (FR4)
+**And** `load`/`append` accept `string | string[]`; hand-authored and SUT-harvested strings are treated identically
+**And** calls outside a run scope fail fast (`usage` error)
+**And** with no state loaded, the judge payload contains no state section (stateless mode, FR5)
+
+### Story 2.3: Fail fast without burning spend
+
+As a developer,
+I want a fatal provider error (bad key, unknown model) to abort the whole test immediately,
+So that one misconfiguration doesn't burn 20 runs of judge spend.
+
+**Acceptance Criteria:**
+
+**Given** 20 parallel runs and a judge call failing with 401
+**When** the first fatal classification lands
+**Then** the runner's `AbortController` cancels all sibling in-flight judge calls via the port's `AbortSignal` (AR7)
+**And** aborted runs are *discarded* — counted in no zone, rendered as discarded
+**And** the test throws the fatal error immediately with its cause
+**And** a retryable error that exhausts retries errors only its own run — siblings continue
+
+### Story 2.4: Choose runs and threshold with eyes open
+
+As a developer,
+I want guidance on picking `runs`/`threshold` combinations,
+So that I don't misread binomial noise as a broken library (NFR4).
+
+**Acceptance Criteria:**
+
+**Given** the repo's docs source
+**When** this story completes
+**Then** a headroom-guidance doc exists explaining: threshold is a sampled estimate; a true-0.95 SUT fails `{runs: 20, threshold: 0.95}` ≈ 26% of the time; recommended headroom patterns (e.g. gate below measured reliability) with worked examples
+**And** the `crucible.it()` API reference section documents `runs`/`threshold` defaults and the three-zone verdict semantics
+**And** Epic 3's docs stories link/absorb this content rather than rewrite it
+
+### Story 2.5: Project-wide run defaults
+
+As a developer,
+I want to set default `runs`/`threshold` in `crucible.config.json`,
+So that my team's reliability bar applies to every inference test without repeating it, while individual tests can still override.
+
+**Acceptance Criteria:**
+
+**Given** `crucible.config.json` containing `{ "testDefaults": { "runs": 20, "threshold": 0.95 } }`
+**When** a `crucible.it()` test omits `runs`/`threshold`
+**Then** the config defaults apply (20 runs, 0.95)
+**And** a test passing `{ runs: 5 }` uses 5 runs with the config's 0.95 threshold — per-field override, not all-or-nothing
+**And** a test passing both uses its own values entirely
+**And** with no `testDefaults` in config, built-ins apply (`runs: 1`, `threshold: 1.0`)
+**And** invalid config defaults (threshold outside (0,1], non-integer runs < 1) fail at config load as `config` errors — same fail-fast as provider validation (AD-9 as amended)
+**And** resolution happens at execution time, not registration (registration stays inert)
+
+## Epic 3: Diagnose, document & ship
+
+A developer can debug a failing CI run from terminal output alone, and the package is publicly consumable — full failure-output contract, verbosity ladder, fixture-driven e2e (local manual + main-merge CI lane), language-agnostic judge conformance spike, docs set, tag-triggered publish.
+
+### Story 3.1: Read a failure like a report
+
+As a developer,
+I want failing inference tests to print the full diagnostic contract,
+So that I can diagnose a red CI run from terminal output alone.
+
+**Acceptance Criteria:**
+
+**Given** a test failing `{ runs: 20, threshold: 0.95 }` with mixed run outcomes
+**When** the verdict renders
+**Then** output shows pass rate vs threshold, and per failing run: the first failed assertion's claim, a bounded response excerpt (default ~500 chars, configurable), and judge reasoning — lowest-`seq` record first (FR8, AD-13)
+**And** errored runs render visually distinct from failed, discarded distinct from both
+**And** multiple assertions in one body attribute correctly (the report names *which* claim failed)
+**And** all rendering comes from run records at verdict time — no mid-run prints at default level
+
+### Story 3.2: Turn up the volume when needed
+
+As a developer,
+I want a verbosity ladder set in config and overridable per invocation,
+So that I get terse CI output and deep local traces from the same suite.
+
+**Acceptance Criteria:**
+
+**Given** config verbosity `default`
+**When** `CRUCIBLE_VERBOSE=debug yarn test` runs
+**Then** debug output wins (env > config, FR9): engine init, config resolution, per-run lifecycle, provider request/response traffic, retry attempts
+**And** `full` prints all judge output per run, not just first errors
+**And** invalid verbosity values fail at config load; invalid env value = `usage` error naming valid levels
+**And** output remains stdout-only — no file writes at any level
+
+### Story 3.3: Prove it end-to-end locally
+
+As a library author,
+I want a fixture-driven e2e suite runnable locally against real OpenRouter,
+So that the critical path is proven with real inference on demand.
+
+**Acceptance Criteria:**
+
+**Given** a checked-in fixture file (txt/json/md) establishing a self-contained test scenario (state + inputs + expected semantic behaviours — domain-agnostic, no external project)
+**When** `make e2e-core` runs with `OPENROUTER_API_KEY` set locally
+**Then** the core scenario exercises the full path — config → `crucible.it` multi-run → `load`/`append` → `coherent` → judge → three-zone verdict — and passes against the real provider
+**And** `make e2e-ext` runs extended scenarios; `make e2e` runs both
+**And** e2e execution is manual-only locally (no pre-commit hook)
+**And** e2e never runs in PR CI; missing API key aborts with an actionable message, not a hang (AR10)
+
+### Story 3.4: Language-agnostic judge conformance (spike)
+
+As a library author,
+I want the judge exercised directly from a container with no TypeScript involved — CLIs installed, a checked-in JSON payload copied in, `curl` against the provider,
+So that the schema's language-agnostic claim is a repeatable conformance check, not a one-time design validation, paving the way for a core schema pack outside the TS framework.
+
+**Spike — deliverables over fixed ACs; explicitly allowed to spawn follow-up stories.**
+
+**Acceptance Criteria (spike exit):**
+
+**Given** a docker container provisioned with required CLIs and the checked-in payload fixture
+**When** the harness curls the provider with schema-as-system-prompt + assembled payload
+**Then** the conformance matrix verdicts match Story 1.3's fixture expectations with zero TS in the loop
+**And** findings are recorded: fixture format fit for a conformance suite, payload-assembly-doc completeness gaps, where the harness should live long-term (e2e/ext now, language-agnostic pack later)
+**And** candidate follow-up stories are proposed (e.g. schema pack extraction, cross-shell conformance suite)
+
+### Story 3.5: e2e-core on merge to main
+
+As a library author,
+I want `make e2e-core` to run in CI when changes merge to main,
+So that the real-inference critical path is continuously verified without spending on every PR.
+
+**Acceptance Criteria:**
+
+**Given** a merge to main
+**When** the main-lane workflow runs
+**Then** it executes lint + typecheck + unit, then `make e2e-core` against real OpenRouter using the `OPENROUTER_API_KEY` repo secret (amended AD-12)
+**And** PR-lane workflows remain provider-free — no provider secret exposure to PR builds
+**And** a main-lane e2e failure is loud (red workflow, visible status badge)
+**And** permitted CI secrets remain exactly: npm credential + `OPENROUTER_API_KEY`
+
+### Story 3.6: Learn it from the docs alone
+
+As a new user,
+I want docs that take me from install to a trustworthy CI gate,
+So that I never need to read source or file an issue to use v1 correctly.
+
+**Acceptance Criteria:**
+
+**Given** the shipped docs set
+**When** a newcomer follows it
+**Then** getting-started walks install → config → first smoke test → multi-run gate, absorbing the Story 2.4 headroom guidance (AR13)
+**And** an OpenRouter reference documents provider/model/`meta`/`testDefaults`, `OPENROUTER_API_KEY`, and CI-secret guidance
+**And** a schema explainer covers the instruction-schema concept, `coherent.md`'s contract, and how editing it changes behaviour (FR6)
+**And** documented gotchas include: unasserted verdicts (NFR5), re-entrant body requirement, judge false-negative stance (NFR3)
+
+### Story 3.7: Ship it with provenance
+
+As a library author,
+I want a tag-triggered publish pipeline,
+So that every npm release is built, tested, and attested reproducibly.
+
+**Acceptance Criteria:**
+
+**Given** a `v*` tag pushed to GitHub
+**When** the publish workflow runs
+**Then** it runs lint + typecheck + unit, builds dual ESM+CJS via tsdown, and publishes `crucible-ai` to npm with provenance via Trusted Publishing (OIDC; `NPM_TOKEN` fallback) (AR10)
+**And** the published package exposes one `crucible` namespace, ships `schemas/`, declares Jest as peer dependency, engines `>=22`
+**And** `npm pack` contents verified: no e2e, fixtures, or config with local values leak into the tarball
+**And** README on npm shows the current `crucible.it()` API
