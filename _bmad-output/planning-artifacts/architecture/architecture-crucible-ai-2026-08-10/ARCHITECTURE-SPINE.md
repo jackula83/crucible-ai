@@ -88,7 +88,7 @@ graph LR
 
 - **Binds:** FR-7, FR-9
 - **Prevents:** keys in committable files; per-module config re-reads and double validation drifting; suite collection failing on config errors; late crashes mid-spend
-- **Rule:** `crucible.config.json` (project root, committable) holds provider, model, `meta` passthrough, verbosity default. `config.get()` is memoized and first invoked at execution of the first run — never at registration. Config load itself resolves the adapter via `providers/registry` (unknown provider = load-time failure with actionable error; `config.get().provider` is the resolved adapter singleton — the judge never touches the registry) and computes `effectiveVerbosity` (env override applied). API keys come only from the adapter's declared provider-native env var (`OPENROUTER_API_KEY`); `CRUCIBLE_`-prefixed vars are reserved for crucible-owned settings.
+- **Rule:** `crucible.config.json` (project root, committable) holds provider, model, `meta` passthrough, verbosity default, and optional `testDefaults` (`runs`, `threshold`) — resolution precedence: `crucible.it()` param > config `testDefaults` (per-field) > built-in (`runs: 1`, `threshold: 1.0`), resolved at execution time. `testDefaults` are validated at load like every other config field. `config.get()` is memoized and first invoked at execution of the first run — never at registration. Config load itself resolves the adapter via `providers/registry` (unknown provider = load-time failure with actionable error; `config.get().provider` is the resolved adapter singleton — the judge never touches the registry) and computes `effectiveVerbosity` (env override applied). API keys come only from the adapter's declared provider-native env var (`OPENROUTER_API_KEY`); `CRUCIBLE_`-prefixed vars are reserved for crucible-owned settings.
 
 ### AD-10 — Reporter owns all output
 
@@ -106,7 +106,7 @@ graph LR
 
 - **Binds:** all (operational)
 - **Prevents:** provider spend and provider secrets in CI; untested publishes
-- **Rule:** CI (GitHub Actions) runs lint + typecheck + unit tests only — zero provider traffic, no provider key. e2e tests run locally against real OpenRouter, split `e2e/core` (critical paths, minimal) and `e2e/ext`; pre-commit hook runs `e2e/core`; Makefile exposes `e2e-core` / `e2e-ext` / `e2e`. Publishing is tag-triggered: `v*` tag → GH Action runs unit tests → `npm publish` with provenance, authenticated via npm Trusted Publishing (OIDC) — or an `NPM_TOKEN` secret as fallback — the only CI secret permitted. Convention: `make e2e` locally before tagging. (Supersedes PRD §6.1 "CI: e2e against funded OpenRouter account" — e2e stays real and funded, gated locally.)
+- **Rule:** CI (GitHub Actions) has two lanes. PR lane: lint + typecheck + unit tests only — zero provider traffic, no provider key. Main lane (merge to main): additionally runs `make e2e-core` against real OpenRouter via an `OPENROUTER_API_KEY` repo secret. e2e tests otherwise run locally and manually — no pre-commit hook; Makefile exposes `e2e-core` / `e2e-ext` / `e2e`, split `e2e/core` (critical paths, minimal) and `e2e/ext`. Publishing is tag-triggered: `v*` tag → GH Action runs unit tests → `npm publish` with provenance, authenticated via npm Trusted Publishing (OIDC) — or an `NPM_TOKEN` secret as fallback. Permitted CI secrets: exactly the npm credential (publish) and `OPENROUTER_API_KEY` (main lane). Convention: `make e2e` locally before tagging.
 
 ### AD-13 — Run-record contract
 
@@ -208,5 +208,4 @@ sequenceDiagram
 - **Custom state-parsing instructions; typed state** — post-MVP idea (PRD non-goal).
 - **Judge-verdict caching / cost optimization** — post-MVP (PRD non-goal).
 - **Response excerpt cap** — default ~500 chars, configurable; a reporter setting, not an invariant (PRD assumption).
-- **Pre-commit hook mechanism** (husky vs plain `.git/hooks`) — story-level tooling choice; the hook's job (run `e2e/core`) is fixed by AD-12.
 - **TypeScript 7 adoption** — after the native compiler's programmatic API (7.1) and tooling support settle.
