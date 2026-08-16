@@ -27,3 +27,6 @@ venv/
 # Misc
 *.tmp
 .cache/
+
+# Test output
+coverage/

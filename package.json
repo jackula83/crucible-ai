@@ -1,0 +1,50 @@
+{
+  "name": "crucible-ai",
+  "version": "0.1.0",
+  "description": "Coherence testing for LLM-integrated code",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "build": "tsdown",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "peerDependencies": {
+    "jest": "^30.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@jest/globals": "^30.4.1",
+    "@types/node": "^22.18.0",
+    "eslint": "^9.39.0",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.12",
+    "tsdown": "^0.22.14",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.67.0"
+  }
+}
