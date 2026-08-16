@@ -1,15 +1,12 @@
-export type CrucibleErrorKind = 'config' | 'usage' | 'infra';
+type CrucibleErrorKind = 'config' | 'usage' | 'infra';
 
-export interface CrucibleErrorOptions {
-  /** Only meaningful for kind 'infra': whether the failure is worth retrying. */
+interface CrucibleErrorOptions {
   readonly retryable?: boolean;
-  /** Underlying cause (e.g. the provider error for infra failures). */
   readonly cause?: unknown;
 }
 
-export class CrucibleError extends Error {
+class CrucibleError extends Error {
   readonly kind: CrucibleErrorKind;
-  /** Set for kind 'infra' (defaults to false); undefined for other kinds. */
   readonly retryable?: boolean;
 
   constructor(kind: CrucibleErrorKind, message: string, options?: CrucibleErrorOptions) {
@@ -21,3 +18,6 @@ export class CrucibleError extends Error {
     }
   }
 }
+
+export { CrucibleError };
+export type { CrucibleErrorKind, CrucibleErrorOptions };

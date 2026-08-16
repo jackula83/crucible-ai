@@ -1,43 +1,42 @@
 import { CrucibleError } from '../core/errors.js';
 import type { ProviderAdapter } from './types.js';
 
-/**
- * Provider registry. Resolution is called ONLY by core/config (AD-2) —
- * downstream code receives the resolved adapter via config.get().provider
- * and never touches this module.
- */
+class ProviderRegistry {
+  private readonly adapters = new Map<string, ProviderAdapter>();
 
-const adapters = new Map<string, ProviderAdapter>();
+  register(name: string, adapter: ProviderAdapter): void {
+    if (name !== adapter.name) {
+      throw new CrucibleError(
+        'usage',
+        `Registry name "${name}" must match adapter.name "${adapter.name}".`,
+      );
+    }
+    if (this.adapters.has(name)) {
+      throw new CrucibleError('usage', `Provider "${name}" is already registered.`);
+    }
+    this.adapters.set(name, adapter);
+  }
 
-/** Register an adapter singleton under a provider name. Registration is inert (AD-9): it never loads config or env. */
-export function register(name: string, adapter: ProviderAdapter): void {
-  if (name !== adapter.name) {
-    throw new CrucibleError(
-      'usage',
-      `Registry name "${name}" must match adapter.name "${adapter.name}".`,
-    );
+  resolve(name: string): ProviderAdapter {
+    const adapter = this.adapters.get(name);
+    if (adapter !== undefined) {
+      return adapter;
+    }
+    throw new CrucibleError('config', `Unknown provider "${name}". ${this.describeRegistered()}`);
   }
-  if (adapters.has(name)) {
-    throw new CrucibleError('usage', `Provider "${name}" is already registered.`);
-  }
-  adapters.set(name, adapter);
-}
 
-/** Resolve a provider name to its registered adapter singleton. */
-export function resolve(name: string): ProviderAdapter {
-  const adapter = adapters.get(name);
-  if (adapter !== undefined) {
-    return adapter;
+  tryResolve(name: string): ProviderAdapter | undefined {
+    return this.adapters.get(name);
   }
-  const registered = [...adapters.keys()];
-  const available =
-    registered.length > 0
-      ? `Registered providers: ${registered.join(', ')}.`
+
+  private describeRegistered(): string {
+    const names = [...this.adapters.keys()];
+    return names.length > 0
+      ? `Registered providers: ${names.join(', ')}.`
       : 'No providers are registered.';
-  throw new CrucibleError('config', `Unknown provider "${name}". ${available}`);
+  }
 }
 
-/** Test-only escape hatch: reset registry state between unit tests. Not part of the public API. */
-export function clearRegistryForTesting(): void {
-  adapters.clear();
-}
+const providerRegistry = new ProviderRegistry();
+
+export { ProviderRegistry, providerRegistry };

@@ -80,6 +80,12 @@ All files NEW (greenfield):
 
 ## Spec Change Log
 
+### 2026-08-16 — Post-done rework (user-directed, applies to all future stories)
+- Trigger: Jack rejected the test suite as implementation tests and the code style as below standard.
+- Amended: tests rewritten functional-only (error kinds not messages; no typeof/shape, no import/export, no process access, no file writes; boundaries injected — `ConfigBoundary` fake, per-test `ProviderRegistry` instances); tests colocated beside source (no `__tests__`); no code comments; named exports grouped at end of file (no inline/default exports); framework internals OOP (`ConfigStore`, `FileSystemConfigBoundary`, `ProviderRegistry`, `FakeAdapter` classes); public surface isolated in `src/api/` with entry re-exporting only from it.
+- Known-bad state avoided: message-text assertions coupling tests to copy; temp-dir/chdir/env-proxy test harness; module-level mutable registry state requiring clear-between-tests.
+- KEEP: DI-first design (boundary + registry injected into ConfigStore); FakeAdapter as the port contract double Story 1.2 implements against; kind-based error taxonomy. These rules are codified in CLAUDE.md → binding for Stories 1.2+.
+
 ## Review Triage Log
 
 ### 2026-08-16 — Review pass
