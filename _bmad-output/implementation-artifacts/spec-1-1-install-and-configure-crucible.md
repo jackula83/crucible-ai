@@ -2,8 +2,9 @@
 title: 'Story 1.1 — Install and configure Crucible'
 type: 'feature'
 created: '2026-08-16'
-status: 'in-review'
+status: 'done'
 baseline_revision: '8948ed3c5a52f0f0ad6eab4ed3198c4a0869e36b'
+final_revision: 'ae0375cb356a3287241eeda106645688df186410'
 review_loop_iteration: 0
 followup_review_recommended: true
 context:
