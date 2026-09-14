@@ -11,3 +11,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-1-2-reliable-judge-connectivity-via-openrouter.md`
   summary: No per-attempt timeout exists anywhere — a hung provider socket stalls a judge call forever and the retry machinery never engages; decide per-attempt timeout policy when Story 1.4's runner derives test timeouts from run count and provider budget (AD-3).
   evidence: Both reviewers flagged it; the spec matrix lists "timeout" as retryable input but only the caller's signal can currently produce one, and nothing arms such a signal yet.
+
+- source_spec: PR #8 review discussion (2026-09-14)
+  summary: When recommended judge-model guidance ships (OQ-6, docs epic), promote a model enum into src as its home — until then model identifiers stay user-supplied config data with the test enum in providers/test/test-model.enum.ts.
+  evidence: Jack asked whether the test model enum should be usable by implementation; today src has no consumer for it (FR-7 keeps provider params opaque), but OQ-6's recommended-model docs would create one.
