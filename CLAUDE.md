@@ -18,6 +18,9 @@ Run at session start:
 
 - PR comments/replies posted via `gh` go out under Jack's account — always
   prefix them with `🤖 Claude's reply:` so authorship is clear.
+- Only resolve a review thread when the fix is applied and unambiguous. If the
+  reply asks a question, offers options, or interprets an unclear comment,
+  leave the thread OPEN for Jack to resolve.
 
 ## Testing rules
 
