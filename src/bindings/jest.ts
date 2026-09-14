@@ -13,11 +13,7 @@ type Registrar = (name: string, fn: () => Promise<void>, timeout?: number) => vo
 const GATING_OPTION_KEYS = ['runs', 'threshold'] as const;
 
 class JestBinding {
-  private static lazyJestRegistrar(
-    name: string,
-    fn: () => Promise<void>,
-    timeout?: number,
-  ): void {
+  private static lazyJestRegistrar(name: string, fn: () => Promise<void>, timeout?: number): void {
     const registrar = (globalThis as { it?: Registrar }).it;
     if (typeof registrar !== 'function') {
       throw new CrucibleError(

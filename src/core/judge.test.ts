@@ -81,10 +81,7 @@ describe('Judge', () => {
   it('an unparseable reply after the re-ask leaves an ErrorRecord readable within the run', async () => {
     const scope = new RunScope();
     const judge = Harness.judge(
-      new ScriptedAdapter(
-        [{ resolve: 'still not json' }, { resolve: 'nope' }],
-        'retryable',
-      ),
+      new ScriptedAdapter([{ resolve: 'still not json' }, { resolve: 'nope' }], 'retryable'),
       scope,
     );
     const outcome = await scope.enterRun(async () => {
@@ -140,7 +137,10 @@ describe('Judge', () => {
   it('a successful judgment appends a VerdictRecord readable within the run', async () => {
     const scope = new RunScope();
     const judge = Harness.judge(
-      new ScriptedAdapter([{ resolve: '{"verdict":false,"reasoning":"names the mismatch"}' }], 'retryable'),
+      new ScriptedAdapter(
+        [{ resolve: '{"verdict":false,"reasoning":"names the mismatch"}' }],
+        'retryable',
+      ),
       scope,
     );
     const verdicts = await scope.enterRun(async () => {

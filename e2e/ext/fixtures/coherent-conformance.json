@@ -4,20 +4,14 @@
     {
       "id": "coherent-separation",
       "expected": true,
-      "state": [
-        "Bob is at the casino.",
-        "Jane is at home."
-      ],
+      "state": ["Bob is at the casino.", "Jane is at home."],
       "response": "Jane searches every room of the house, growing frustrated. Bob is nowhere to be found — wherever he is tonight, it isn't here.",
       "claim": "Jane won't find Bob, because they aren't in the same place."
     },
     {
       "id": "incoherent-separation",
       "expected": false,
-      "state": [
-        "Bob is at the casino.",
-        "Jane is at home."
-      ],
+      "state": ["Bob is at the casino.", "Jane is at home."],
       "response": "Jane opens the kitchen door and there is Bob, shuffling a deck of cards at the table. \"Found you,\" she laughs.",
       "claim": "Jane won't find Bob, because they aren't in the same place."
     },

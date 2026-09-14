@@ -104,7 +104,9 @@ describe('ConfigStore rejects invalid configs as config failures', () => {
     'key-like field "%s" is rejected regardless of casing',
     (field) => {
       expect(
-        Harness.errorKind(Harness.store({ provider: 'fake', model: TestModel.Generic, [field]: 'sk' })),
+        Harness.errorKind(
+          Harness.store({ provider: 'fake', model: TestModel.Generic, [field]: 'sk' }),
+        ),
       ).toBe('config');
     },
   );

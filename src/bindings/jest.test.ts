@@ -92,11 +92,7 @@ describe('JestBinding', () => {
   it('rejects a body passed in both positions as a usage error', () => {
     const registrar = new RegistrarFake();
     const error = Harness.errorFrom(() =>
-      Harness.binding(registrar).register(
-        'double',
-        (async () => {}) as never,
-        async () => {},
-      ),
+      Harness.binding(registrar).register('double', (async () => {}) as never, async () => {}),
     );
     expect(error.kind).toBe('usage');
   });
