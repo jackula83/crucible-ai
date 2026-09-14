@@ -128,6 +128,11 @@ cost, which dominates once multi-run reliability gates multiply call volume.
 Reliability was graded by comparing each model's verdicts and reasoning
 against a frontier model's independent interpretation of the same cases.
 
+For trust and transparency, the verbatim inputs and unedited model replies
+from these runs are published in
+[docs/judge-validation-runs.md](docs/judge-validation-runs.md) — see for
+yourself that the concept works.
+
 ## Alternatives
 
 **[promptfoo](https://www.promptfoo.dev)** is the closest neighbour and the difference is philosophical. Promptfoo is config-first: the test suite is a YAML file, the CLI is the primary surface, and the unit of work is an eval run across a matrix of prompts and providers. Crucible is code-first: the test is a function in an existing test suite, the system under test is the developer's own engine instantiated in-process, and the unit of work is a single assertion inside a red-green loop.
