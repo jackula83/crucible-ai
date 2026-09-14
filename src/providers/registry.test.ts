@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
 import { FakeAdapter } from './fake-adapter.js';
-import { ProviderRegistry } from './registry.js';
+import { providerRegistry, ProviderRegistry } from './registry.js';
 
 function getError(fn: () => unknown): CrucibleError {
   let caught: unknown;
@@ -40,6 +40,14 @@ describe('ProviderRegistry', () => {
     expect(getError(() => registry.register('mismatch', new FakeAdapter('fake'))).kind).toBe(
       'usage',
     );
+  });
+});
+
+describe('default provider registry', () => {
+  it('resolves the built-in openrouter provider without user wiring', () => {
+    const adapter = providerRegistry.resolve('openrouter');
+    expect(adapter.envVar).toBe('OPENROUTER_API_KEY');
+    expect(providerRegistry.resolve('openrouter')).toBe(adapter);
   });
 });
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { ConfigStore } from './config.js';
 import type { ConfigBoundary, ConfigFileRead } from './config.js';
-import { ProviderRegistry } from '../providers/registry.js';
+import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
 import { FakeAdapter } from '../providers/fake-adapter.js';
 
 class FakeConfigBoundary implements ConfigBoundary {
@@ -67,6 +67,17 @@ describe('ConfigStore with a valid config', () => {
     expect(config.model).toBe('deepseek-v3');
     expect(config.meta).toEqual({ provider: 'atlascloud', reasoning: 'minimal' });
     expect(config.effectiveVerbosity).toBe('full');
+  });
+
+  it('resolves the built-in openrouter provider singleton through the default registry', () => {
+    const store = new ConfigStore(
+      new FakeConfigBoundary({
+        found: true,
+        raw: JSON.stringify({ provider: 'openrouter', model: 'openai/gpt-5' }),
+      }),
+      providerRegistry,
+    );
+    expect(store.get().provider).toBe(providerRegistry.resolve('openrouter'));
   });
 
   it('applies defaults when optional fields are omitted', () => {
