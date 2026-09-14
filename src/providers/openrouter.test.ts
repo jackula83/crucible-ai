@@ -1,111 +1,79 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
 import { OpenRouterAdapter } from './openrouter.js';
-import type { ProviderHttpRequestInit, ProviderHttpResponse } from './openrouter.js';
+import {
+  FakeFetchBoundary,
+  jsonResponse,
+  successEnvelope,
+  TestModel,
+  TEST_API_KEY,
+} from './test/fakes.js';
 
-interface CapturedCall {
-  readonly url: string;
-  readonly init: ProviderHttpRequestInit;
-}
+const COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const JUDGE_PROMPT = 'judge this';
+const RAW_JUDGE_REPLY = '  {"verdict": true, "reasoning": "state and response agree"}\n';
+const ROUTING_META = { provider: 'atlascloud', reasoning: 'minimal' };
+const PADDED_API_KEY = `  ${TEST_API_KEY}  `;
 
-class FakeFetchBoundary {
-  readonly calls: CapturedCall[] = [];
-
-  constructor(private readonly respond: () => Promise<ProviderHttpResponse>) {}
-
-  readonly fetchLike = (url: string, init: ProviderHttpRequestInit): Promise<ProviderHttpResponse> => {
-    this.calls.push({ url, init });
-    if (init.signal.aborted) {
-      return Promise.reject(
-        init.signal.reason instanceof Error ? init.signal.reason : new Error('aborted'),
-      );
-    }
-    return this.respond();
-  };
-}
-
-function jsonResponse(status: number, envelope: unknown): () => Promise<ProviderHttpResponse> {
-  return () =>
-    Promise.resolve({
-      ok: status >= 200 && status < 300,
-      status,
-      json: () => Promise.resolve(envelope),
-    });
-}
-
-function successEnvelope(text: string): unknown {
-  return { choices: [{ message: { content: text } }] };
-}
-
-function adapterWith(
+const adapterWith = (
   boundary: FakeFetchBoundary,
-  keyReader: () => string | undefined = () => 'test-key',
-): OpenRouterAdapter {
+  keyReader: () => string | undefined = () => TEST_API_KEY,
+): OpenRouterAdapter => {
   return new OpenRouterAdapter(boundary.fetchLike, keyReader);
-}
+};
 
-async function failureFrom(adapter: OpenRouterAdapter): Promise<unknown> {
+const failureFrom = async (adapter: OpenRouterAdapter): Promise<unknown> => {
   try {
-    await adapter.complete({ model: 'm', prompt: 'p' }, new AbortController().signal);
+    await adapter.complete(
+      { model: TestModel.Generic, prompt: JUDGE_PROMPT },
+      new AbortController().signal,
+    );
   } catch (error) {
     return error;
   }
   throw new Error('expected complete() to reject');
-}
+};
 
 describe('OpenRouterAdapter completion', () => {
-  it('resolves the completion text exactly as the provider returned it', async () => {
-    const text = '  VERDICT: coherent\n\nbecause reasons  ';
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(text)));
-    const result = await adapterWith(boundary).complete(
-      { model: 'openai/gpt-5', prompt: 'judge this' },
+  it('delivers the raw judge reply for core to parse, whitespace preserved', async () => {
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
+    const reply = await adapterWith(boundary).complete(
+      { model: TestModel.Gpt5, prompt: JUDGE_PROMPT },
       new AbortController().signal,
     );
-    expect(result).toBe(text);
+    expect(reply).toBe(RAW_JUDGE_REPLY);
   });
 
-  it('posts a bearer-authorized chat-completions request for the given model and prompt', async () => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
-    await adapterWith(boundary, () => 'sk-or-abc').complete(
-      { model: 'openai/gpt-5', prompt: 'judge this' },
+  it('sends a bearer-authorized completion request for the given model and prompt', async () => {
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
+    await adapterWith(boundary).complete(
+      { model: TestModel.Gpt5, prompt: JUDGE_PROMPT },
       new AbortController().signal,
     );
     expect(boundary.calls).toHaveLength(1);
     const [call] = boundary.calls;
-    expect(call.url).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(call.url).toBe(COMPLETIONS_URL);
     expect(call.init.method).toBe('POST');
-    expect(call.init.headers['Authorization']).toBe('Bearer sk-or-abc');
+    expect(call.init.headers['Authorization']).toBe(`Bearer ${TEST_API_KEY}`);
     expect(JSON.parse(call.init.body)).toMatchObject({
-      model: 'openai/gpt-5',
-      messages: [{ role: 'user', content: 'judge this' }],
+      model: TestModel.Gpt5,
+      messages: [{ role: 'user', content: JUDGE_PROMPT }],
     });
   });
 
   it('spreads meta into the provider request body unmodified', async () => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
     await adapterWith(boundary).complete(
-      {
-        model: 'openai/gpt-5',
-        prompt: 'judge this',
-        meta: { provider: 'atlascloud', reasoning: 'minimal' },
-      },
+      { model: TestModel.Gpt5, prompt: JUDGE_PROMPT, meta: ROUTING_META },
       new AbortController().signal,
     );
-    const body = JSON.parse(boundary.calls[0].init.body) as Record<string, unknown>;
-    expect(body['provider']).toBe('atlascloud');
-    expect(body['reasoning']).toBe('minimal');
-  });
-
-  it('names openrouter and its key environment variable', () => {
-    const adapter = adapterWith(new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok'))));
-    expect(adapter.name).toBe('openrouter');
-    expect(adapter.envVar).toBe('OPENROUTER_API_KEY');
+    expect(JSON.parse(boundary.calls[0].init.body)).toMatchObject(ROUTING_META);
   });
 });
 
 describe('OpenRouterAdapter missing API key', () => {
   it.each([undefined, ''])('fails as config before any network call when the key is %p', async (key) => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
     const error = await failureFrom(adapterWith(boundary, () => key));
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('config');
@@ -178,37 +146,41 @@ describe('OpenRouterAdapter 200-with-error envelope', () => {
 
 describe('OpenRouterAdapter request-shaping guarantees', () => {
   it('never lets meta clobber the model or messages fields', async () => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
     await adapterWith(boundary).complete(
       {
-        model: 'openai/gpt-5',
-        prompt: 'judge this',
-        meta: { model: 'evil/override', messages: [], routing: 'kept' },
+        model: TestModel.Gpt5,
+        prompt: JUDGE_PROMPT,
+        meta: { model: TestModel.DeepseekV3, messages: [], routing: 'kept' },
       },
       new AbortController().signal,
     );
     const body = JSON.parse(boundary.calls[0].init.body) as Record<string, unknown>;
-    expect(body['model']).toBe('openai/gpt-5');
-    expect(body['messages']).toEqual([{ role: 'user', content: 'judge this' }]);
+    expect(body['model']).toBe(TestModel.Gpt5);
+    expect(body['messages']).toEqual([{ role: 'user', content: JUDGE_PROMPT }]);
     expect(body['routing']).toBe('kept');
   });
 
   it('trims whitespace padding from the API key before authorizing', async () => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
-    await adapterWith(boundary, () => '  sk-or-padded  ').complete(
-      { model: 'm', prompt: 'p' },
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
+    await adapterWith(boundary, () => PADDED_API_KEY).complete(
+      { model: TestModel.Generic, prompt: JUDGE_PROMPT },
       new AbortController().signal,
     );
-    expect(boundary.calls[0].init.headers['Authorization']).toBe('Bearer sk-or-padded');
+    expect(boundary.calls[0].init.headers['Authorization']).toBe(`Bearer ${TEST_API_KEY}`);
   });
 
   it('rejects unserializable meta as a usage failure before any network call', async () => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
     const adapter = adapterWith(boundary);
     let caught: unknown;
     try {
       await adapter.complete(
-        { model: 'm', prompt: 'p', meta: { big: BigInt(1) as unknown as string } },
+        {
+          model: TestModel.Generic,
+          prompt: JUDGE_PROMPT,
+          meta: { big: BigInt(1) as unknown as string },
+        },
         new AbortController().signal,
       );
     } catch (error) {
@@ -222,7 +194,7 @@ describe('OpenRouterAdapter request-shaping guarantees', () => {
 
 describe('OpenRouterAdapter classification of crucible errors', () => {
   it('respects the retryable flag on infra errors', () => {
-    const adapter = adapterWith(new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok'))));
+    const adapter = adapterWith(new FakeFetchBoundary(jsonResponse(200, successEnvelope(''))));
     expect(adapter.classifyFailure(new CrucibleError('infra', 'm', { retryable: true }))).toBe(
       'retryable',
     );
@@ -232,7 +204,7 @@ describe('OpenRouterAdapter classification of crucible errors', () => {
   });
 
   it('treats config and usage errors as fatal', () => {
-    const adapter = adapterWith(new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok'))));
+    const adapter = adapterWith(new FakeFetchBoundary(jsonResponse(200, successEnvelope(''))));
     expect(adapter.classifyFailure(new CrucibleError('config', 'm'))).toBe('fatal');
     expect(adapter.classifyFailure(new CrucibleError('usage', 'm'))).toBe('fatal');
   });
@@ -240,11 +212,14 @@ describe('OpenRouterAdapter classification of crucible errors', () => {
 
 describe('OpenRouterAdapter port contract', () => {
   it('rejects when the signal is already aborted', async () => {
-    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope('ok')));
+    const boundary = new FakeFetchBoundary(jsonResponse(200, successEnvelope(RAW_JUDGE_REPLY)));
     const controller = new AbortController();
     controller.abort();
     await expect(
-      adapterWith(boundary).complete({ model: 'm', prompt: 'p' }, controller.signal),
+      adapterWith(boundary).complete(
+        { model: TestModel.Generic, prompt: JUDGE_PROMPT },
+        controller.signal,
+      ),
     ).rejects.toBeInstanceOf(Error);
   });
 });

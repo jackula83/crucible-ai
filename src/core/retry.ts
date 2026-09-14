@@ -5,10 +5,10 @@ const MAX_ATTEMPTS = 3;
 
 type Sleep = (ms: number) => Promise<void>;
 
-interface BackoffPolicy {
+type BackoffPolicy = {
   readonly baseDelayMs?: number;
   readonly jitter?: () => number;
-}
+};
 
 function realSleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

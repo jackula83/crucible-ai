@@ -1,9 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
-import { FakeAdapter } from './fake-adapter.js';
+import { FakeAdapter, TestModel } from './test/fakes.js';
 import { providerRegistry, ProviderRegistry } from './registry.js';
 
-function getError(fn: () => unknown): CrucibleError {
+const getError = (fn: () => unknown): CrucibleError => {
   let caught: unknown;
   try {
     fn();
@@ -12,7 +12,7 @@ function getError(fn: () => unknown): CrucibleError {
   }
   expect(caught).toBeInstanceOf(CrucibleError);
   return caught as CrucibleError;
-}
+};
 
 describe('ProviderRegistry', () => {
   it('resolves a registered adapter as the same singleton every time', () => {
@@ -46,7 +46,6 @@ describe('ProviderRegistry', () => {
 describe('default provider registry', () => {
   it('resolves the built-in openrouter provider without user wiring', () => {
     const adapter = providerRegistry.resolve('openrouter');
-    expect(adapter.envVar).toBe('OPENROUTER_API_KEY');
     expect(providerRegistry.resolve('openrouter')).toBe(adapter);
   });
 });
@@ -54,17 +53,17 @@ describe('default provider registry', () => {
 describe('FakeAdapter port contract', () => {
   it('completes a request with a deterministic response', async () => {
     const response = await new FakeAdapter().complete(
-      { model: 'test-model', prompt: 'hello' },
+      { model: TestModel.Generic, prompt: 'hello' },
       new AbortController().signal,
     );
-    expect(response).toBe('fake:test-model:hello');
+    expect(response).toBe(`fake:${TestModel.Generic}:hello`);
   });
 
   it('rejects when the signal is already aborted', async () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      new FakeAdapter().complete({ model: 'm', prompt: 'p' }, controller.signal),
+      new FakeAdapter().complete({ model: TestModel.Generic, prompt: 'p' }, controller.signal),
     ).rejects.toBeInstanceOf(Error);
   });
 

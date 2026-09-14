@@ -1,66 +1,28 @@
 import { describe, expect, it } from '@jest/globals';
-import type { CompletionRequest, FailureClass, ProviderAdapter } from '../providers/types.js';
+import type { CompletionRequest, ProviderAdapter } from '../providers/types.js';
+import { TestModel } from '../providers/test/fakes.js';
 import { CrucibleError } from './errors.js';
 import { RetryingCompleter } from './retry.js';
+import { ScriptedAdapter, SleepRecorder } from './test/fakes.js';
 
-type Attempt = { readonly resolve: string } | { readonly reject: Error };
+const request: CompletionRequest = { model: TestModel.Generic, prompt: 'p' };
 
-class ScriptedAdapter implements ProviderAdapter {
-  readonly name = 'scripted';
-  readonly envVar = 'SCRIPTED_API_KEY';
-  calls = 0;
-
-  constructor(
-    private readonly attempts: readonly Attempt[],
-    private readonly classification: FailureClass,
-  ) {}
-
-  complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {
-    if (signal.aborted) {
-      return Promise.reject(
-        signal.reason instanceof Error ? signal.reason : new Error('aborted'),
-      );
-    }
-    const attempt = this.attempts[this.calls];
-    if (attempt === undefined) {
-      return Promise.reject(new Error('scripted adapter called past its script'));
-    }
-    this.calls += 1;
-    return 'resolve' in attempt ? Promise.resolve(attempt.resolve) : Promise.reject(attempt.reject);
-  }
-
-  classifyFailure(): FailureClass {
-    return this.classification;
-  }
-}
-
-class SleepRecorder {
-  readonly waits: number[] = [];
-
-  readonly sleep = (ms: number): Promise<void> => {
-    this.waits.push(ms);
-    return Promise.resolve();
-  };
-}
-
-const request: CompletionRequest = { model: 'm', prompt: 'p' };
-
-function run(adapter: ProviderAdapter, recorder: SleepRecorder): Promise<string> {
+const run = (adapter: ProviderAdapter, recorder: SleepRecorder): Promise<string> => {
   return new RetryingCompleter(recorder.sleep).complete(
     adapter,
     request,
     new AbortController().signal,
   );
-}
+};
 
-async function failureFrom(promise: Promise<string>): Promise<unknown> {
+const failureFrom = async (promise: Promise<string>): Promise<unknown> => {
   try {
     await promise;
   } catch (error) {
     return error;
   }
   throw new Error('expected the retrier to reject');
-}
+};
 
 describe('RetryingCompleter', () => {
   it('resolves a first-attempt success with no sleeping', async () => {

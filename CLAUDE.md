@@ -27,8 +27,17 @@ Run at session start:
   - writing or modifying real files (temp dirs included)
 - Boundaries (fs, env, network, clock) are injected and faked in tests; pure
   logic is tested through the module's behavior, not its internals.
+- Fakes/test doubles live in their own file under the area's `test/` folder
+  (e.g. `src/providers/test/fakes.ts`), never inline in a test file.
+- Test helpers are arrow-function consts (`const helper = (…) => {…}`), never
+  `function` declarations; no `readonly` modifiers in test helpers.
+- No magic values in tests: model names and other repeated literals go into
+  enums/named constants.
+- Never assert identity/shape fields (`.name`, `.envVar`, instanceof a
+  concrete class) — that is implementation testing.
 - No code comments. Needing a comment means the code is not clear enough —
   fix the naming/structure instead.
+- Prefer `type` over `interface` — everywhere, src and tests.
 - Named exports only, grouped at the END of the file (`export { thing };`).
   No inline `export` keywords, no default exports. Sole exception:
   tool-mandated config files (jest/tsdown) whose contract requires a default

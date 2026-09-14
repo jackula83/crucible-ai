@@ -4,18 +4,18 @@ import type { CompletionRequest, FailureClass, ProviderAdapter } from './types.j
 const OPENROUTER_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const RETRYABLE_CLIENT_STATUSES: ReadonlySet<number> = new Set([408, 429]);
 
-interface ProviderHttpResponse {
+type ProviderHttpResponse = {
   readonly ok: boolean;
   readonly status: number;
   json(): Promise<unknown>;
-}
+};
 
-interface ProviderHttpRequestInit {
+type ProviderHttpRequestInit = {
   readonly method: 'POST';
   readonly headers: Readonly<Record<string, string>>;
   readonly body: string;
   readonly signal: AbortSignal;
-}
+};
 
 type FetchLike = (url: string, init: ProviderHttpRequestInit) => Promise<ProviderHttpResponse>;
 type ApiKeyReader = () => string | undefined;
