@@ -6,7 +6,13 @@ import { Capture } from './test/capture.harness.js';
 
 class Harness {
   static verdict(claim: string): Omit<VerdictRecord, 'seq'> {
-    return { assertion: 'coherent', claim, verdict: true, reasoning: 'consistent' };
+    return {
+      assertion: 'coherent',
+      claim,
+      verdict: true,
+      reasoning: 'consistent',
+      response: 'the response',
+    };
   }
 }
 

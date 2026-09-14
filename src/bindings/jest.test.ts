@@ -3,6 +3,7 @@ import { CrucibleError } from '../core/errors.js';
 import { Runner } from '../core/runner.js';
 import { RunScope } from '../core/state.js';
 import { Capture } from '../core/test/capture.harness.js';
+import { CrucibleVerdictError } from '../core/verdict-error.js';
 import { JestBinding } from './jest.js';
 import { RegistrarFake } from './test/registrar.fake.js';
 
@@ -97,12 +98,16 @@ describe('JestBinding', () => {
     expect(error.kind).toBe('usage');
   });
 
-  it('a body rejection propagates as-is', async () => {
+  it('a body rejection surfaces as a verdict error carrying the original failure', async () => {
     const registrar = new RegistrarFake();
     const failure = new Error('assertion failed');
     Harness.binding(registrar).register('failing', async () => {
       throw failure;
     });
-    await expect(registrar.registrations[0]?.fn()).rejects.toBe(failure);
+    const registration = registrar.registrations[0];
+    expect(registration).toBeDefined();
+    const error = await Capture.rejection(registration!.fn());
+    expect(error).toBeInstanceOf(CrucibleVerdictError);
+    expect((error as CrucibleVerdictError).cause).toBe(failure);
   });
 });

@@ -153,6 +153,7 @@ describe('Judge', () => {
         claim: 'the claim',
         verdict: false,
         reasoning: 'names the mismatch',
+        response: 'the response',
         seq: 0,
       },
     ]);

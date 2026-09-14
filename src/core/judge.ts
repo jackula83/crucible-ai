@@ -59,6 +59,7 @@ class Judge {
         claim,
         verdict: parsed.verdict,
         reasoning: parsed.reasoning,
+        response,
       });
       return parsed.verdict;
     } catch (cause) {

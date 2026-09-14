@@ -1,4 +1,4 @@
-export { crucible, CrucibleError } from './api/crucible.js';
+export { crucible, CrucibleError, CrucibleVerdictError } from './api/crucible.js';
 export type {
   CompletionRequest,
   CrucibleErrorKind,
@@ -6,4 +6,5 @@ export type {
   ProviderAdapter,
   RunOptions,
   TestBody,
+  VerdictOutcome,
 } from './api/crucible.js';

@@ -5,9 +5,11 @@ import { CrucibleError } from '../core/errors.js';
 import { Judge } from '../core/judge.js';
 import type { CompletionTarget } from '../core/judge.js';
 import { RetryingCompleter } from '../core/retry.js';
+import { Reporter } from '../core/report.js';
 import { Runner } from '../core/runner.js';
 import { SchemaSource } from '../core/schema-source.js';
 import { runScope } from '../core/state.js';
+import { CrucibleVerdictError } from '../core/verdict-error.js';
 
 class CompositionRoot {
   private judge?: Judge;
@@ -24,7 +26,7 @@ class CompositionRoot {
   }
 
   jestBinding(): JestBinding {
-    this.binding ??= new JestBinding(new Runner(runScope));
+    this.binding ??= new JestBinding(new Runner(runScope, new Reporter()));
     return this.binding;
   }
 
@@ -53,7 +55,8 @@ const crucible = Object.freeze({
   },
 });
 
-export { crucible, CrucibleError };
+export { crucible, CrucibleError, CrucibleVerdictError };
+export type { VerdictOutcome } from '../core/verdict-error.js';
 export type { RunOptions, TestBody };
 export type { CrucibleErrorKind } from '../core/errors.js';
 export type { CompletionRequest, FailureClass, ProviderAdapter } from '../providers/types.js';
