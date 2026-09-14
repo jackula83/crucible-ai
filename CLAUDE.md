@@ -27,14 +27,24 @@ Run at session start:
   - writing or modifying real files (temp dirs included)
 - Boundaries (fs, env, network, clock) are injected and faked in tests; pure
   logic is tested through the module's behavior, not its internals.
-- Fakes/test doubles live in their own file under the area's `test/` folder
-  (e.g. `src/providers/test/fakes.ts`), never inline in a test file.
-- Test helpers are arrow-function consts (`const helper = (…) => {…}`), never
-  `function` declarations; no `readonly` modifiers in test helpers.
+- Fakes/test doubles live ONE PER FILE under the area's `test/` folder with a
+  `.fake.ts` suffix (e.g. `src/core/test/scripted-adapter.fake.ts`); enums in
+  `.enum.ts` files; shared helpers in `.harness.ts` files. Never a monolithic
+  fakes file, never inline in a test file.
+- All test helper functions belong to a class (e.g. a `Harness` class with
+  static methods, or a shared harness file) — no loose module-level helper
+  functions; no `readonly` modifiers in test helpers.
 - No magic values in tests: model names and other repeated literals go into
-  enums/named constants.
+  enums/named constants in their own files.
 - Never assert identity/shape fields (`.name`, `.envVar`, instanceof a
   concrete class) — that is implementation testing.
+- Assert OUTCOMES, not interactions: no captured-request inspection, no
+  call/wait counters, no cause-identity piles. One purpose per test; assert
+  only that purpose (error kind + the single behavior under test). Wire-shape
+  correctness belongs to e2e against the real provider, not unit fakes.
+- No test-induced design damage in implementation: never name or shape
+  production code around tests (no `real*` names, no loose module functions —
+  fold defaults into private static class members).
 - No code comments. Needing a comment means the code is not clear enough —
   fix the naming/structure instead.
 - Prefer `type` over `interface` — everywhere, src and tests.

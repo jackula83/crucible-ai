@@ -34,17 +34,17 @@ class OpenRouterEnvelopeError extends Error {
   }
 }
 
-function readKeyFromEnvironment(): string | undefined {
-  return process.env.OPENROUTER_API_KEY;
-}
-
 class OpenRouterAdapter implements ProviderAdapter {
   readonly name = 'openrouter';
   readonly envVar = 'OPENROUTER_API_KEY';
 
+  private static readKeyFromEnvironment(): string | undefined {
+    return process.env.OPENROUTER_API_KEY;
+  }
+
   constructor(
     private readonly fetchLike: FetchLike = globalThis.fetch,
-    private readonly readApiKey: ApiKeyReader = readKeyFromEnvironment,
+    private readonly readApiKey: ApiKeyReader = OpenRouterAdapter.readKeyFromEnvironment,
   ) {}
 
   async complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {

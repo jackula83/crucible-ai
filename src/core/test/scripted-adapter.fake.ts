@@ -1,5 +1,4 @@
 import type { CompletionRequest, FailureClass, ProviderAdapter } from '../../providers/types.js';
-import type { ConfigBoundary, ConfigFileRead } from '../config.js';
 
 type Attempt = { resolve: string } | { reject: Error };
 
@@ -32,36 +31,5 @@ class ScriptedAdapter implements ProviderAdapter {
   }
 }
 
-class SleepRecorder {
-  waits: number[] = [];
-
-  sleep = (ms: number): Promise<void> => {
-    this.waits.push(ms);
-    return Promise.resolve();
-  };
-}
-
-class FakeConfigBoundary implements ConfigBoundary {
-  fileReads = 0;
-
-  constructor(
-    private read: ConfigFileRead,
-    private verbosityOverride?: string,
-  ) {}
-
-  describeSource(): string {
-    return 'fake://crucible.config.json';
-  }
-
-  readConfigFile(): ConfigFileRead {
-    this.fileReads += 1;
-    return this.read;
-  }
-
-  readVerbosityOverride(): string | undefined {
-    return this.verbosityOverride;
-  }
-}
-
-export { FakeConfigBoundary, ScriptedAdapter, SleepRecorder };
+export { ScriptedAdapter };
 export type { Attempt };

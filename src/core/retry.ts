@@ -10,16 +10,16 @@ type BackoffPolicy = {
   readonly jitter?: () => number;
 };
 
-function realSleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 class RetryingCompleter {
   private readonly baseDelayMs: number;
   private readonly jitter: () => number;
 
+  private static defaultSleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   constructor(
-    private readonly sleep: Sleep = realSleep,
+    private readonly sleep: Sleep = RetryingCompleter.defaultSleep,
     backoff: BackoffPolicy = {},
   ) {
     this.baseDelayMs = Math.max(1, backoff.baseDelayMs ?? 250);

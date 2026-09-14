@@ -1,18 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
-import { FakeAdapter, TestModel } from './test/fakes.js';
+import { Capture } from '../core/test/capture.harness.js';
+import { FakeAdapter } from './test/adapter.fake.js';
+import { TestModel } from './test/test-model.enum.js';
 import { providerRegistry, ProviderRegistry } from './registry.js';
 
-const getError = (fn: () => unknown): CrucibleError => {
-  let caught: unknown;
-  try {
-    fn();
-  } catch (err) {
-    caught = err;
+class Harness {
+  static errorKind(fn: () => unknown): string {
+    const error = Capture.thrown(fn);
+    expect(error).toBeInstanceOf(CrucibleError);
+    return (error as CrucibleError).kind;
   }
-  expect(caught).toBeInstanceOf(CrucibleError);
-  return caught as CrucibleError;
-};
+}
 
 describe('ProviderRegistry', () => {
   it('resolves a registered adapter as the same singleton every time', () => {
@@ -26,18 +25,20 @@ describe('ProviderRegistry', () => {
   it('resolving an unregistered provider is a config failure', () => {
     const registry = new ProviderRegistry();
     registry.register('fake', new FakeAdapter());
-    expect(getError(() => registry.resolve('nope')).kind).toBe('config');
+    expect(Harness.errorKind(() => registry.resolve('nope'))).toBe('config');
   });
 
   it('registering the same provider twice is a usage failure', () => {
     const registry = new ProviderRegistry();
     registry.register('fake', new FakeAdapter('fake'));
-    expect(getError(() => registry.register('fake', new FakeAdapter('fake'))).kind).toBe('usage');
+    expect(Harness.errorKind(() => registry.register('fake', new FakeAdapter('fake')))).toBe(
+      'usage',
+    );
   });
 
   it('registering under a name that differs from the adapter is a usage failure', () => {
     const registry = new ProviderRegistry();
-    expect(getError(() => registry.register('mismatch', new FakeAdapter('fake'))).kind).toBe(
+    expect(Harness.errorKind(() => registry.register('mismatch', new FakeAdapter('fake')))).toBe(
       'usage',
     );
   });
