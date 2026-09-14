@@ -14,6 +14,11 @@ Run at session start:
 - When a consumer/dependency does not yet exist, bind to its spec (port
   interface + contract tests) — never ship stub implementations in `src/`.
 
+## Collaboration rules
+
+- PR comments/replies posted via `gh` go out under Jack's account — always
+  prefix them with `🤖 Claude's reply:` so authorship is clear.
+
 ## Testing rules
 
 - Tests live NEXT to the code they test (`config.test.ts` beside `config.ts`).
