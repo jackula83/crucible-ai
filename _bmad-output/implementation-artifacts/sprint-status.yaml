@@ -49,12 +49,12 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
   # Epic 1: First semantic assertion (walking skeleton)
-  epic-1: in-progress
+  epic-1: done
   1-1-install-and-configure-crucible: done
   1-2-reliable-judge-connectivity-via-openrouter: done
   1-3-design-the-coherent-instruction-schema-spike: done
   1-4-first-semantic-verdict-smoke-mode: done
-  1-5-see-why-it-failed: backlog
+  1-5-see-why-it-failed: done
   epic-1-retrospective: optional
 
   # Epic 2: Reliability measurement (stateful pass^k)

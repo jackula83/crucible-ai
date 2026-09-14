@@ -6,6 +6,7 @@ type VerdictRecord = {
   readonly claim: string;
   readonly verdict: boolean;
   readonly reasoning: string;
+  readonly response: string;
   readonly seq: number;
 };
 

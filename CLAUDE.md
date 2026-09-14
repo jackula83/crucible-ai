@@ -39,9 +39,13 @@ Run at session start:
   `.fake.ts` suffix (e.g. `src/core/test/scripted-adapter.fake.ts`); enums in
   `.enum.ts` files; shared helpers in `.harness.ts` files. Never a monolithic
   fakes file, never inline in a test file.
-- All test helper functions belong to a class (e.g. a `Harness` class with
-  static methods, or a shared harness file) — no loose module-level helper
-  functions; no `readonly` modifiers in test helpers.
+- All test helper functions belong to a class — no loose module-level helper
+  functions; no `readonly` modifiers in test helpers. Harness classes live in
+  the area's `test/` folder as `<name>-harness.util.ts` with a specific class
+  name (`ReportHarness`), never inline in the test file; shared test utilities
+  are `<name>.util.ts` (e.g. `capture.util.ts`).
+- Pure utility/formatter classes in src carry the `.util.ts` suffix
+  (`reporter.util.ts`, `payload-assembler.util.ts`).
 - No magic values in tests: model names and other repeated literals go into
   enums/named constants in their own files.
 - Never assert identity/shape fields (`.name`, `.envVar`, instanceof a
