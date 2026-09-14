@@ -2,10 +2,11 @@
 title: 'Story 1.4 — First semantic verdict (smoke mode)'
 type: 'feature'
 created: '2026-09-14'
-status: 'in-review'
+status: 'done'
 baseline_revision: 'da955969628672f0280103b72563927e68678127'
+final_revision: 'e5d25068f0403051dbe938b9a662b0afa2ee3474'
 review_loop_iteration: 0
-followup_review_recommended: false
+followup_review_recommended: true
 context:
   - '{project-root}/CLAUDE.md'
   - '{project-root}/_bmad-output/implementation-artifacts/epic-1-context.md'
