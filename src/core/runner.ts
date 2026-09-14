@@ -1,5 +1,5 @@
 import { CrucibleError } from './errors.js';
-import { Reporter } from './report.js';
+import { Reporter } from './reporter.util.js';
 import { RunScope, runScope } from './state.js';
 import { CrucibleVerdictError } from './verdict-error.js';
 

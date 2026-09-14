@@ -1,20 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
 import { RunScope } from './state.js';
-import type { VerdictRecord } from './state.js';
-import { Capture } from './test/capture.harness.js';
-
-class Harness {
-  static verdict(claim: string): Omit<VerdictRecord, 'seq'> {
-    return {
-      assertion: 'coherent',
-      claim,
-      verdict: true,
-      reasoning: 'consistent',
-      response: 'the response',
-    };
-  }
-}
+import { Capture } from './test/capture.util.js';
+import { StateHarness } from './test/state-harness.util.js';
 
 describe('RunScope', () => {
   it('gives every run a fresh context — concurrent runs never see each other', async () => {
@@ -22,13 +10,13 @@ describe('RunScope', () => {
     const [first, second] = await Promise.all([
       scope.enterRun(async () => {
         scope.context().state.push('first-fact');
-        scope.recordVerdict(Harness.verdict('first claim'));
+        scope.recordVerdict(StateHarness.verdict('first claim'));
         await Promise.resolve();
         return scope.context();
       }),
       scope.enterRun(async () => {
         await Promise.resolve();
-        scope.recordVerdict(Harness.verdict('second claim'));
+        scope.recordVerdict(StateHarness.verdict('second claim'));
         return scope.context();
       }),
     ]);
@@ -45,7 +33,7 @@ describe('RunScope', () => {
   });
 
   it('recording a verdict outside a run scope is a usage error', () => {
-    const error = Capture.thrown(() => new RunScope().recordVerdict(Harness.verdict('claim')));
+    const error = Capture.thrown(() => new RunScope().recordVerdict(StateHarness.verdict('claim')));
     expect(error).toBeInstanceOf(CrucibleError);
     expect((error as CrucibleError).kind).toBe('usage');
   });
@@ -53,8 +41,8 @@ describe('RunScope', () => {
   it('appended verdicts are readable within the same run, in sequence order', async () => {
     const scope = new RunScope();
     const verdicts = await scope.enterRun(async () => {
-      scope.recordVerdict(Harness.verdict('first claim'));
-      scope.recordVerdict(Harness.verdict('second claim'));
+      scope.recordVerdict(StateHarness.verdict('first claim'));
+      scope.recordVerdict(StateHarness.verdict('second claim'));
       return scope.context().verdicts;
     });
     expect(verdicts.map((record) => ({ claim: record.claim, seq: record.seq }))).toEqual([
@@ -66,7 +54,7 @@ describe('RunScope', () => {
   it('verdicts and errors share one sequence so run history keeps its order', async () => {
     const scope = new RunScope();
     const context = await scope.enterRun(async () => {
-      scope.recordVerdict(Harness.verdict('claim'));
+      scope.recordVerdict(StateHarness.verdict('claim'));
       scope.recordError({ cause: new Error('boom'), attempts: 1 });
       return scope.context();
     });

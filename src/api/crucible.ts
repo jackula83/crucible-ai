@@ -5,7 +5,7 @@ import { CrucibleError } from '../core/errors.js';
 import { Judge } from '../core/judge.js';
 import type { CompletionTarget } from '../core/judge.js';
 import { RetryingCompleter } from '../core/retry.js';
-import { Reporter } from '../core/report.js';
+import { Reporter } from '../core/reporter.util.js';
 import { Runner } from '../core/runner.js';
 import { SchemaSource } from '../core/schema-source.js';
 import { runScope } from '../core/state.js';

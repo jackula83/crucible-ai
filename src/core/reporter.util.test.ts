@@ -1,40 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from './errors.js';
-import { Reporter } from './report.js';
-import type { ErrorRecord, RunContext, VerdictRecord } from './state.js';
+import { Reporter } from './reporter.util.js';
+import { ReportHarness } from './test/report-harness.util.js';
 
 const EXCERPT_LIMIT = 500;
 
-class Harness {
-  static context(verdicts: VerdictRecord[] = [], errors: ErrorRecord[] = []): RunContext {
-    return { state: [], verdicts, errors };
-  }
-
-  static falseVerdict(overrides: Partial<VerdictRecord> = {}): VerdictRecord {
-    return {
-      assertion: 'coherent',
-      claim: 'the claim',
-      verdict: false,
-      reasoning: 'the reasoning',
-      response: 'the response',
-      seq: 0,
-      ...overrides,
-    };
-  }
-
-  static renderedFailure(
-    verdicts: VerdictRecord[],
-    cause: unknown = new Error('boom'),
-    errors: ErrorRecord[] = [],
-  ): string {
-    return new Reporter().renderFailed(Harness.context(verdicts, errors), cause);
-  }
-}
-
 describe('Reporter', () => {
   it('renders the claim, the response, and the judge reasoning for a false verdict', () => {
-    const message = Harness.renderedFailure([
-      Harness.falseVerdict({
+    const message = ReportHarness.renderedFailure([
+      ReportHarness.falseVerdict({
         claim: 'the answer stays on topic',
         response: 'a wandering answer',
         reasoning: 'the answer drifts away from the question',
@@ -46,8 +20,8 @@ describe('Reporter', () => {
   });
 
   it('also names the thrown failure so an unrelated crash is never hidden by a verdict', () => {
-    const message = Harness.renderedFailure(
-      [Harness.falseVerdict()],
+    const message = ReportHarness.renderedFailure(
+      [ReportHarness.falseVerdict()],
       new TypeError('cannot read x of undefined'),
     );
     expect(message).toContain('cannot read x of undefined');
@@ -55,29 +29,29 @@ describe('Reporter', () => {
 
   it('truncates a long response to 500 characters and marks the cut', () => {
     const response = 'x'.repeat(EXCERPT_LIMIT + 100);
-    const message = Harness.renderedFailure([Harness.falseVerdict({ response })]);
+    const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
     expect(message).toContain('x'.repeat(EXCERPT_LIMIT) + '…');
     expect(message).not.toContain('x'.repeat(EXCERPT_LIMIT + 1));
   });
 
   it('renders a response at the 500-character limit whole, without a truncation marker', () => {
     const response = 'y'.repeat(EXCERPT_LIMIT);
-    const message = Harness.renderedFailure([Harness.falseVerdict({ response })]);
+    const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
     expect(message).toContain(response);
     expect(message).not.toContain('…');
   });
 
   it('never cuts a surrogate pair in half at the excerpt boundary', () => {
     const response = 'z'.repeat(EXCERPT_LIMIT - 1) + '😀' + 'tail';
-    const message = Harness.renderedFailure([Harness.falseVerdict({ response })]);
+    const message = ReportHarness.renderedFailure([ReportHarness.falseVerdict({ response })]);
     expect(message).not.toMatch(/[\uD800-\uDBFF]…/);
     expect(message).toContain('…');
   });
 
   it('renders only the lowest-seq false verdict when several exist', () => {
-    const message = Harness.renderedFailure([
-      Harness.falseVerdict({ claim: 'later claim', reasoning: 'later reasoning', seq: 4 }),
-      Harness.falseVerdict({ claim: 'first claim', reasoning: 'first reasoning', seq: 1 }),
+    const message = ReportHarness.renderedFailure([
+      ReportHarness.falseVerdict({ claim: 'later claim', reasoning: 'later reasoning', seq: 4 }),
+      ReportHarness.falseVerdict({ claim: 'first claim', reasoning: 'first reasoning', seq: 1 }),
     ]);
     expect(message).toContain('first claim');
     expect(message).toContain('first reasoning');
@@ -86,9 +60,9 @@ describe('Reporter', () => {
   });
 
   it('skips true verdicts when picking the failing one', () => {
-    const message = Harness.renderedFailure([
-      Harness.falseVerdict({ claim: 'passing claim', verdict: true, seq: 0 }),
-      Harness.falseVerdict({ claim: 'failing claim', reasoning: 'the mismatch', seq: 2 }),
+    const message = ReportHarness.renderedFailure([
+      ReportHarness.falseVerdict({ claim: 'passing claim', verdict: true, seq: 0 }),
+      ReportHarness.falseVerdict({ claim: 'failing claim', reasoning: 'the mismatch', seq: 2 }),
     ]);
     expect(message).toContain('failing claim');
     expect(message).toContain('the mismatch');
@@ -96,8 +70,8 @@ describe('Reporter', () => {
   });
 
   it('picks the first failure across verdicts and error records by seq', () => {
-    const message = Harness.renderedFailure(
-      [Harness.falseVerdict({ claim: 'later claim', seq: 3 })],
+    const message = ReportHarness.renderedFailure(
+      [ReportHarness.falseVerdict({ claim: 'later claim', seq: 3 })],
       new Error('terminal'),
       [{ cause: new Error('earlier judge outage'), attempts: 2, seq: 1 }],
     );
@@ -107,13 +81,13 @@ describe('Reporter', () => {
 
   it('falls back to the original cause when no false verdict was recorded', () => {
     const cause = new RangeError('index out of bounds');
-    const message = Harness.renderedFailure([], cause);
+    const message = ReportHarness.renderedFailure([], cause);
     expect(message).toContain('RangeError');
     expect(message).toContain('index out of bounds');
   });
 
   it('renders a non-Error object rejection legibly, never as [object Object]', () => {
-    const message = Harness.renderedFailure([], { code: 'ECONNRESET' });
+    const message = ReportHarness.renderedFailure([], { code: 'ECONNRESET' });
     expect(message).not.toContain('[object Object]');
     expect(message).toContain('ECONNRESET');
   });
@@ -124,13 +98,13 @@ describe('Reporter', () => {
         throw new Error('nope');
       },
     };
-    const message = Harness.renderedFailure([], hostile);
+    const message = ReportHarness.renderedFailure([], hostile);
     expect(message).toMatch(/unrenderable/i);
   });
 
   it('renders an errored run as errored, not failed, and names the infrastructure cause', () => {
     const cause = new CrucibleError('infra', 'provider unreachable');
-    const message = new Reporter().renderErrored(Harness.context(), cause);
+    const message = new Reporter().renderErrored(ReportHarness.context(), cause);
     expect(message).toMatch(/errored/i);
     expect(message).toMatch(/not failed/i);
     expect(message).toContain('provider unreachable');
@@ -139,7 +113,7 @@ describe('Reporter', () => {
   it('names the terminal rejection and the recorded attempt count for an errored run', () => {
     const rejection = new CrucibleError('infra', 'kept failing after 3 attempts');
     const message = new Reporter().renderErrored(
-      Harness.context(
+      ReportHarness.context(
         [],
         [
           { cause: new Error('second outage'), attempts: 1, seq: 3 },
@@ -153,7 +127,7 @@ describe('Reporter', () => {
   });
 
   it('keeps failed-run wording free of the errored-run marker', () => {
-    const failed = Harness.renderedFailure([Harness.falseVerdict()]);
+    const failed = ReportHarness.renderedFailure([ReportHarness.falseVerdict()]);
     expect(failed).not.toMatch(/not failed/i);
   });
 });

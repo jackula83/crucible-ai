@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { PayloadAssembler } from './payload-assembler.js';
+import { PayloadAssembler } from './payload-assembler.util.js';
 
 const assembler = new PayloadAssembler();
 

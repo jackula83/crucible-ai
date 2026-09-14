@@ -1,6 +1,6 @@
 import type { ProviderAdapter } from '../providers/types.js';
 import { CrucibleError } from './errors.js';
-import { PayloadAssembler } from './payload-assembler.js';
+import { PayloadAssembler } from './payload-assembler.util.js';
 import { RetryingCompleter } from './retry.js';
 import { RunScope, runScope } from './state.js';
 
