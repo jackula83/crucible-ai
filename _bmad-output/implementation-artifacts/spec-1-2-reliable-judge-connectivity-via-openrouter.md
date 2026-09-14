@@ -2,8 +2,9 @@
 title: 'Story 1.2 — Reliable judge connectivity via OpenRouter'
 type: 'feature'
 created: '2026-09-14'
-status: 'in-review'
+status: 'done'
 baseline_revision: '08ed008889f8bd8dbf77607c90f147aa72a7948c'
+final_revision: '8b9fa284da7c06d8ec2588a2aa21715cb15c0476'
 review_loop_iteration: 0
 followup_review_recommended: true
 context:
