@@ -2,7 +2,7 @@
 title: Crucible — Semantic Assertion Library for Non-Deterministic Systems
 status: final
 created: 2026-08-10
-updated: 2026-08-10
+updated: 2026-09-14
 ---
 
 # PRD: Crucible
@@ -128,6 +128,8 @@ Developer can call `crucible.coherent(response, claim)` and receive a boolean ve
 
 **Notes:** future assertion types (`range()`, `exact()`, others — open list) follow the same boolean contract. [NON-GOAL for MVP]
 
+**Assertion-selection doctrine (decided 2026-09-14):** use the narrowest assertion that can express the claim — judge latitude is a cost, spent only when needed. Ladder: (1) plain framework assertions when the value is programmatically accessible (deterministic, no judge spend); (2) `exact()` when an exact target value is embedded in prose — judge extracts only, comparison is fixed by the schema; (3) `range()` for numeric targets with tolerance, same extraction pattern; (4) `coherent()` for claims that are inherently semantic — prose, reasoning, state consistency, knowledge boundaries — never where a narrower rung suffices. `coherent()` can express the narrower cases, but `exact()`/`range()` exist to give them a consistent, low-latitude prompt structure; this doctrine (not judge-unreliability evidence alone) justifies building them post-MVP. Getting-started docs must teach the ladder.
+
 ### 4.4 Judge Engine
 
 **Description:** The judge is an AI agent following the instruction schema — markdown rule files defining how each assertion type is evaluated. The judge's task is deliberately narrow (evaluate one claim against one response plus provided state), which is why frontier models are expected to be reliable at it; judge false-negatives are an accepted limitation. Provider access is configured in `crucible.config.json`: provider (MVP: OpenRouter), model, and a provider-specific `meta` passthrough (e.g. OpenRouter routing/reasoning params). Realizes UJ-1, UJ-2, UJ-3.
@@ -199,7 +201,7 @@ Developer can set output detail in `crucible.config.json` and override it per in
 
 ### 6.2 Out of Scope for MVP
 
-- Additional assertion types (`range()`, `exact()`, …) — after `coherent` proves the schema shape.
+- Additional assertion types (`range()`, `exact()`, …) — after `coherent` proves the schema shape; justified by the assertion-selection doctrine (§4.3), shaped as judge-extracts / schema-fixes-comparison.
 - Additional providers (Bedrock etc.) — each needs its own docs page at GA; deferred.
 - Python/.NET/Java shells; Vitest binding. [NOTE FOR PM: Vitest may be near-free — revisit if MVP lands quickly. OQ-4.]
 - Serial/concurrency-limited run execution.
