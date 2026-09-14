@@ -1,0 +1,45 @@
+# Judge Model Notes — `coherent` schema validation (Story 1.3 spike)
+
+Run date: 2026-09-14 · 3 models × 4 conformance cases × 5 repetitions = 60 real
+OpenRouter calls against `schemas/coherent.md` (schema as system prompt, payload
+assembled per the schema's documented order). Fixtures:
+`e2e/ext/fixtures/coherent-conformance.json`.
+
+## Results
+
+| Model | JSON compliance | Verdict accuracy | Median latency | Cost / call | Total run cost |
+| --- | --- | --- | --- | --- | --- |
+| `deepseek/deepseek-v4-flash-0731` | 20/20 | 20/20 | 4.8 s | ~$0.00004 | $0.0008 |
+| `google/gemini-3.8-flash` | 20/20 | 20/20 | 3.2 s | ~$0.0014 | $0.027 |
+| `anthropic/claude-sonnet-5` | 20/20 | 20/20 | 2.4 s | ~$0.0025 | $0.049 |
+
+## Ratings (1–5; reliability graded by comparing each model's verdicts and stated reasoning against Claude Fable 5's own interpretation of every case)
+
+| Model | Speed | Cost | Reliability | Notes |
+| --- | --- | --- | --- | --- |
+| `deepseek/deepseek-v4-flash-0731` | 3 | 5 | 5 | Slowest of the three but ~65× cheaper than sonnet; every verdict and reasoning matched the reference interpretation; reasoning concise and correctly cites the deciding fragment |
+| `google/gemini-3.8-flash` | 4 | 4 | 5 | Quotes response evidence verbatim in reasoning; fully aligned verdicts |
+| `anthropic/claude-sonnet-5` | 5 | 3 | 5 | Fastest and the only model that explicitly weaves STATE facts into its justification (richest diagnostics for failure output) |
+
+## Recommendation (feeds OQ-6)
+
+- **Default judge:** `deepseek/deepseek-v4-flash-0731` — indistinguishable
+  accuracy on this matrix at a fraction of the cost; pass^k multi-run testing
+  multiplies call volume, so cost dominates.
+- **When failure diagnostics matter most:** `anthropic/claude-sonnet-5` —
+  fastest verdicts and the most state-aware reasoning.
+- **Caveat:** this matrix is small and unambiguous by design. Before GA
+  model guidance, extend fixtures with genuinely ambiguous and adversarial
+  cases (partial reveals, implication-only leaks, multi-fact state conflicts)
+  — deliberate follow-up for the e2e/ext suite.
+
+## Wire findings (confirms Story 1.2 adapter assumptions)
+
+- Envelope shape `choices[0].message.content` confirmed on all three models.
+- Strict-JSON output held for 60/60 calls with no code fences — the schema's
+  output contract is sufficient without provider structured-output params.
+- `usage: { include: true }` returns per-call `usage.cost` — useful for a
+  future spend report.
+- Local dev gotcha: Node's fetch rejects the corporate TLS proxy
+  (`SELF_SIGNED_CERT_IN_CHAIN`); run harnesses/e2e with `--use-system-ca`.
+  The e2e Makefile (Story 3.3) should bake this in.
