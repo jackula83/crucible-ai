@@ -1,24 +1,59 @@
+import { JestBinding } from '../bindings/jest.js';
+import type { RunOptions, TestBody } from '../bindings/jest.js';
+import { config } from '../core/config.js';
 import { CrucibleError } from '../core/errors.js';
+import { Judge } from '../core/judge.js';
+import type { CompletionTarget } from '../core/judge.js';
+import { RetryingCompleter } from '../core/retry.js';
+import { Runner } from '../core/runner.js';
+import { SchemaSource } from '../core/schema-source.js';
+import { runScope } from '../core/state.js';
 
-function notImplementedYet(member: string): never {
-  throw new CrucibleError(
-    'usage',
-    `crucible.${member} is not implemented yet — coming in Story 1.4.`,
-  );
+class CompositionRoot {
+  private judge?: Judge;
+  private binding?: JestBinding;
+
+  coherentJudge(): Judge {
+    this.judge ??= new Judge(
+      CompositionRoot.coherentSchemaSupplier(),
+      new RetryingCompleter(),
+      CompositionRoot.completionTarget,
+      runScope,
+    );
+    return this.judge;
+  }
+
+  jestBinding(): JestBinding {
+    this.binding ??= new JestBinding(new Runner(runScope));
+    return this.binding;
+  }
+
+  private static coherentSchemaSupplier(): () => string {
+    const source = new SchemaSource();
+    return () => source.load('coherent');
+  }
+
+  private static completionTarget(): CompletionTarget {
+    const { provider, model, meta } = config.get();
+    return { adapter: provider, model, meta };
+  }
 }
 
+const compositionRoot = new CompositionRoot();
+
 const crucible = Object.freeze({
-  it(): never {
-    return notImplementedYet('it');
+  it(name: string, optsOrBody: RunOptions | TestBody, maybeBody?: TestBody): void {
+    compositionRoot.jestBinding().register(name, optsOrBody, maybeBody);
   },
-  coherent(): never {
-    return notImplementedYet('coherent');
+  coherent(response: string, claim: string): Promise<boolean> {
+    return compositionRoot.coherentJudge().judgeCoherent(response, claim);
   },
   load(): never {
-    return notImplementedYet('load');
+    throw new CrucibleError('usage', 'crucible.load is not implemented yet — coming in Story 2.2.');
   },
 });
 
 export { crucible, CrucibleError };
+export type { RunOptions, TestBody };
 export type { CrucibleErrorKind } from '../core/errors.js';
 export type { CompletionRequest, FailureClass, ProviderAdapter } from '../providers/types.js';

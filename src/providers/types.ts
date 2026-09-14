@@ -1,5 +1,6 @@
 type CompletionRequest = {
   readonly model: string;
+  readonly system?: string;
   readonly prompt: string;
   readonly meta?: Readonly<Record<string, unknown>>;
 };

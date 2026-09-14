@@ -88,12 +88,15 @@ class OpenRouterAdapter implements ProviderAdapter {
   }
 
   private serializeRequestBody(request: CompletionRequest): string {
+    const messages =
+      request.system !== undefined
+        ? [
+            { role: 'system', content: request.system },
+            { role: 'user', content: request.prompt },
+          ]
+        : [{ role: 'user', content: request.prompt }];
     try {
-      return JSON.stringify({
-        ...request.meta,
-        model: request.model,
-        messages: [{ role: 'user', content: request.prompt }],
-      });
+      return JSON.stringify({ ...request.meta, model: request.model, messages });
     } catch (cause) {
       throw new CrucibleError('usage', 'Config meta is not JSON-serializable.', { cause });
     }
