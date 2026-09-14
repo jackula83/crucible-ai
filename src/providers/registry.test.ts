@@ -1,17 +1,16 @@
 import { describe, expect, it } from '@jest/globals';
 import { CrucibleError } from '../core/errors.js';
-import { FakeAdapter } from './fake-adapter.js';
-import { ProviderRegistry } from './registry.js';
+import { Capture } from '../core/test/capture.harness.js';
+import { FakeAdapter } from './test/adapter.fake.js';
+import { TestModel } from './test/test-model.enum.js';
+import { providerRegistry, ProviderRegistry } from './registry.js';
 
-function getError(fn: () => unknown): CrucibleError {
-  let caught: unknown;
-  try {
-    fn();
-  } catch (err) {
-    caught = err;
+class Harness {
+  static errorKind(fn: () => unknown): string {
+    const error = Capture.thrown(fn);
+    expect(error).toBeInstanceOf(CrucibleError);
+    return (error as CrucibleError).kind;
   }
-  expect(caught).toBeInstanceOf(CrucibleError);
-  return caught as CrucibleError;
 }
 
 describe('ProviderRegistry', () => {
@@ -26,37 +25,46 @@ describe('ProviderRegistry', () => {
   it('resolving an unregistered provider is a config failure', () => {
     const registry = new ProviderRegistry();
     registry.register('fake', new FakeAdapter());
-    expect(getError(() => registry.resolve('nope')).kind).toBe('config');
+    expect(Harness.errorKind(() => registry.resolve('nope'))).toBe('config');
   });
 
   it('registering the same provider twice is a usage failure', () => {
     const registry = new ProviderRegistry();
     registry.register('fake', new FakeAdapter('fake'));
-    expect(getError(() => registry.register('fake', new FakeAdapter('fake'))).kind).toBe('usage');
+    expect(Harness.errorKind(() => registry.register('fake', new FakeAdapter('fake')))).toBe(
+      'usage',
+    );
   });
 
   it('registering under a name that differs from the adapter is a usage failure', () => {
     const registry = new ProviderRegistry();
-    expect(getError(() => registry.register('mismatch', new FakeAdapter('fake'))).kind).toBe(
+    expect(Harness.errorKind(() => registry.register('mismatch', new FakeAdapter('fake')))).toBe(
       'usage',
     );
+  });
+});
+
+describe('default provider registry', () => {
+  it('resolves the built-in openrouter provider without user wiring', () => {
+    const adapter = providerRegistry.resolve('openrouter');
+    expect(providerRegistry.resolve('openrouter')).toBe(adapter);
   });
 });
 
 describe('FakeAdapter port contract', () => {
   it('completes a request with a deterministic response', async () => {
     const response = await new FakeAdapter().complete(
-      { model: 'test-model', prompt: 'hello' },
+      { model: TestModel.Generic, prompt: 'hello' },
       new AbortController().signal,
     );
-    expect(response).toBe('fake:test-model:hello');
+    expect(response).toBe(`fake:${TestModel.Generic}:hello`);
   });
 
   it('rejects when the signal is already aborted', async () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      new FakeAdapter().complete({ model: 'm', prompt: 'p' }, controller.signal),
+      new FakeAdapter().complete({ model: TestModel.Generic, prompt: 'p' }, controller.signal),
     ).rejects.toBeInstanceOf(Error);
   });
 

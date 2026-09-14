@@ -1,9 +1,9 @@
 type CrucibleErrorKind = 'config' | 'usage' | 'infra';
 
-interface CrucibleErrorOptions {
+type CrucibleErrorOptions = {
   readonly retryable?: boolean;
   readonly cause?: unknown;
-}
+};
 
 class CrucibleError extends Error {
   readonly kind: CrucibleErrorKind;

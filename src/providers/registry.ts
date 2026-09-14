@@ -1,4 +1,5 @@
 import { CrucibleError } from '../core/errors.js';
+import { OpenRouterAdapter } from './openrouter.js';
 import type { ProviderAdapter } from './types.js';
 
 class ProviderRegistry {
@@ -38,5 +39,6 @@ class ProviderRegistry {
 }
 
 const providerRegistry = new ProviderRegistry();
+providerRegistry.register('openrouter', new OpenRouterAdapter());
 
 export { ProviderRegistry, providerRegistry };

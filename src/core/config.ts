@@ -11,22 +11,22 @@ const KEY_LIKE_FIELDS = ['apikey', 'api_key', 'key', 'token', 'secret', 'authori
 
 type Verbosity = (typeof VERBOSITY_LEVELS)[number];
 
-interface CrucibleConfig {
+type CrucibleConfig = {
   readonly provider: ProviderAdapter;
   readonly model: string;
   readonly meta?: Readonly<Record<string, unknown>>;
   readonly effectiveVerbosity: Verbosity;
-}
+};
 
 type ConfigFileRead =
   | { readonly found: true; readonly raw: string }
   | { readonly found: false; readonly reason: 'missing' | 'unreadable'; readonly detail?: string };
 
-interface ConfigBoundary {
+type ConfigBoundary = {
   describeSource(): string;
   readConfigFile(): ConfigFileRead;
   readVerbosityOverride(): string | undefined;
-}
+};
 
 class FileSystemConfigBoundary implements ConfigBoundary {
   describeSource(): string {

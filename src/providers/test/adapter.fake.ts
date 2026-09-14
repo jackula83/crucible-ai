@@ -1,9 +1,9 @@
-import type { CompletionRequest, FailureClass, ProviderAdapter } from './types.js';
+import type { CompletionRequest, FailureClass, ProviderAdapter } from '../types.js';
 
 class FakeAdapter implements ProviderAdapter {
-  readonly envVar = 'FAKE_API_KEY';
+  envVar = 'FAKE_API_KEY';
 
-  constructor(readonly name: string = 'fake') {}
+  constructor(public name: string = 'fake') {}
 
   complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {
     if (signal.aborted) {

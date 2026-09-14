@@ -12,4 +12,21 @@ export default tseslint.config(
       'no-console': 'error',
     },
   },
+  {
+    files: ['src/**/*.ts'],
+    rules: {
+      'no-restricted-exports': [
+        'error',
+        {
+          restrictDefaultExports: {
+            direct: true,
+            named: true,
+            defaultFrom: true,
+            namedFrom: true,
+            namespaceFrom: true,
+          },
+        },
+      ],
+    },
+  },
 );

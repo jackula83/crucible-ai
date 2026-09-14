@@ -7,3 +7,11 @@
 - source_spec: `_bmad-output/planning-artifacts/prds/prd-crucible-ai-2026-08-10/prd.md` (§4.3 assertion-selection doctrine, decided 2026-09-14)
   summary: Story 3.6 getting-started docs must teach the assertion-selection ladder — plain framework assertions first, `exact()`/`range()` for embedded values (post-MVP), `coherent()` only for inherently semantic claims (prose, reasoning, state consistency, knowledge boundaries).
   evidence: Doctrine decided with Jack 2026-09-14 and recorded in the PRD; without a docs entry it will be missed when Story 3.6 is drafted from the epic ACs alone.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-2-reliable-judge-connectivity-via-openrouter.md`
+  summary: No per-attempt timeout exists anywhere — a hung provider socket stalls a judge call forever and the retry machinery never engages; decide per-attempt timeout policy when Story 1.4's runner derives test timeouts from run count and provider budget (AD-3).
+  evidence: Both reviewers flagged it; the spec matrix lists "timeout" as retryable input but only the caller's signal can currently produce one, and nothing arms such a signal yet.
+
+- source_spec: PR #8 review discussion (2026-09-14)
+  summary: When recommended judge-model guidance ships (OQ-6, docs epic), promote a model enum into src as its home — until then model identifiers stay user-supplied config data with the test enum in providers/test/test-model.enum.ts.
+  evidence: Jack asked whether the test model enum should be usable by implementation; today src has no consumer for it (FR-7 keeps provider params opaque), but OQ-6's recommended-model docs would create one.

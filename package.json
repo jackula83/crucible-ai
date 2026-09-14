@@ -31,7 +31,8 @@
     "typecheck": "tsc --noEmit",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "build": "tsdown",
-    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build"
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build",
+    "prepare": "husky"
   },
   "peerDependencies": {
     "jest": "^30.0.0"
@@ -41,6 +42,7 @@
     "@jest/globals": "^30.4.1",
     "@types/node": "^22.18.0",
     "eslint": "^9.39.0",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "ts-jest": "^29.4.12",
     "tsdown": "^0.22.14",
