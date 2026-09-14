@@ -48,7 +48,7 @@ describe('RetryingCompleter', () => {
     expect((error as CrucibleError).retryable).toBe(true);
   });
 
-  it('surfaces a fatal failure as a non-retryable infra error without retrying', async () => {
+  it('gives a fatal failure exactly one attempt — retrying it would burn judge spend for nothing', async () => {
     const adapter = new ScriptedAdapter([{ reject: new Error('unauthorized') }], 'fatal');
     const error = await Harness.failure(adapter);
     expect(error).toBeInstanceOf(CrucibleError);
@@ -83,7 +83,7 @@ describe('RetryingCompleter', () => {
     await expect(Harness.run(adapter)).resolves.toBe('verdict');
   });
 
-  it('stops retrying when the signal aborts during the backoff wait', async () => {
+  it('an abort during the backoff wait means no further attempt is made — aborted runs must not spend', async () => {
     const reason = new Error('caller gave up mid-backoff');
     const controller = new AbortController();
     const adapter = new ScriptedAdapter([{ reject: new Error('flake') }], 'retryable');
