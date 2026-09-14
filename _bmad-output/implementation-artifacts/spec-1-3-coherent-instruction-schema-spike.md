@@ -4,7 +4,7 @@ type: 'chore'
 created: '2026-09-14'
 status: 'done'
 baseline_revision: '3d290aa'
-final_revision: 'pending-commit'
+final_revision: '941b25f'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
