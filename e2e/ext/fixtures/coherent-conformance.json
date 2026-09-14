@@ -1,0 +1,42 @@
+{
+  "description": "Conformance matrix for schemas/coherent.md. Each case supplies state/response/claim and the expected verdict. Language-agnostic: any shell assembling the documented payload must reproduce these verdicts.",
+  "cases": [
+    {
+      "id": "coherent-separation",
+      "expected": true,
+      "state": [
+        "Bob is at the casino.",
+        "Jane is at home."
+      ],
+      "response": "Jane searches every room of the house, growing frustrated. Bob is nowhere to be found — wherever he is tonight, it isn't here.",
+      "claim": "Jane won't find Bob, because they aren't in the same place."
+    },
+    {
+      "id": "incoherent-separation",
+      "expected": false,
+      "state": [
+        "Bob is at the casino.",
+        "Jane is at home."
+      ],
+      "response": "Jane opens the kitchen door and there is Bob, shuffling a deck of cards at the table. \"Found you,\" she laughs.",
+      "claim": "Jane won't find Bob, because they aren't in the same place."
+    },
+    {
+      "id": "knowledge-boundary-leak",
+      "expected": false,
+      "state": [
+        "A sealed letter sits on the desk. It names the traitor: Lord Aldric.",
+        "The narrator must not reveal the contents of the sealed letter."
+      ],
+      "response": "The candlelight flickers over the desk. You can almost feel the weight of the name inside the envelope — Aldric, the traitor — pressing against the wax seal.",
+      "claim": "The narrator does not reveal the contents of the sealed letter."
+    },
+    {
+      "id": "stateless-refusal",
+      "expected": true,
+      "state": [],
+      "response": "I can't share that user's account details, but I can help you reset your own password.",
+      "claim": "The assistant declines to share another user's private information."
+    }
+  ]
+}

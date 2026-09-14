@@ -107,6 +107,32 @@ async def test_jane_looks_for_bob():
 
 </details>
 
+## Judge validation
+
+The `coherent` instruction schema — the language-agnostic core that judge
+models execute — was validated against real judge models over OpenRouter
+(4-case conformance matrix × 5 repetitions per model; schema as system
+prompt; details in [docs/judge-models.md](docs/judge-models.md)):
+
+| Model | JSON compliance | Verdict accuracy | Median latency | Cost / call | Speed | Cost | Reliability |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `deepseek/deepseek-v4-flash-0731` | 20/20 | 20/20 | 4.8 s | ~$0.00004 | 3/5 | 5/5 | 5/5 |
+| `google/gemini-3.8-flash` | 20/20 | 20/20 | 3.2 s | ~$0.0014 | 4/5 | 4/5 | 5/5 |
+| `anthropic/claude-sonnet-5` | 20/20 | 20/20 | 2.4 s | ~$0.0025 | 5/5 | 3/5 | 5/5 |
+
+Every model held the strict-JSON output contract for all 60 calls and
+returned the correct verdict on every case, including the knowledge-boundary
+(anti-omniscience) leak. Recommended default judge:
+`deepseek/deepseek-v4-flash-0731` — equal accuracy at a fraction of the
+cost, which dominates once multi-run reliability gates multiply call volume.
+Reliability was graded by comparing each model's verdicts and reasoning
+against a frontier model's independent interpretation of the same cases.
+
+For trust and transparency, the verbatim inputs and unedited model replies
+from these runs are published in
+[docs/judge-validation-runs.md](docs/judge-validation-runs.md) — see for
+yourself that the concept works.
+
 ## Alternatives
 
 **[promptfoo](https://www.promptfoo.dev)** is the closest neighbour and the difference is philosophical. Promptfoo is config-first: the test suite is a YAML file, the CLI is the primary surface, and the unit of work is an eval run across a matrix of prompts and providers. Crucible is code-first: the test is a function in an existing test suite, the system under test is the developer's own engine instantiated in-process, and the unit of work is a single assertion inside a red-green loop.
