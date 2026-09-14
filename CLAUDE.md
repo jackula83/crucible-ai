@@ -63,5 +63,7 @@ Run at session start:
 - Public programmable interface may expose plain functions; everything
   internal to the framework is OOP — classes with injected collaborators, not
   module-level mutable state or free-function modules.
+- ONE class per file, named after the class in kebab-case. Shared types/
+  constants two classes need go in their own module, never a runtime cycle.
 - The exposed surface lives in `src/api/`; internals stay out of that folder.
   The entry point re-exports only from `src/api/`.
