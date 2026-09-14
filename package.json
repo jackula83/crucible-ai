@@ -32,7 +32,9 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "build": "tsdown",
     "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "peerDependencies": {
     "jest": "^30.0.0"
@@ -44,6 +46,7 @@
     "eslint": "^9.39.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "prettier": "^3.9.6",
     "ts-jest": "^29.4.12",
     "tsdown": "^0.22.14",
     "typescript": "~6.0.3",

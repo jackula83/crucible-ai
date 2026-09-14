@@ -4,4 +4,6 @@ export type {
   CrucibleErrorKind,
   FailureClass,
   ProviderAdapter,
+  RunOptions,
+  TestBody,
 } from './api/crucible.js';

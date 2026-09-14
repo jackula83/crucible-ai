@@ -7,9 +7,7 @@ class FakeAdapter implements ProviderAdapter {
 
   complete(request: CompletionRequest, signal: AbortSignal): Promise<string> {
     if (signal.aborted) {
-      return Promise.reject(
-        signal.reason instanceof Error ? signal.reason : new Error('aborted'),
-      );
+      return Promise.reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'));
     }
     return Promise.resolve(`fake:${request.model}:${request.prompt}`);
   }

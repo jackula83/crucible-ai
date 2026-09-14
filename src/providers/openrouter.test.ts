@@ -57,10 +57,13 @@ describe('OpenRouterAdapter failure classification', () => {
     expect(adapter.classifyFailure(await Harness.failure(adapter))).toBe('retryable');
   });
 
-  it.each([400, 401, 402, 403, 404, 405, 410, 422])('classifies HTTP %i as fatal', async (status) => {
-    const adapter = Harness.adapter(FakeFetchBoundary.respondingWith(status, {}));
-    expect(adapter.classifyFailure(await Harness.failure(adapter))).toBe('fatal');
-  });
+  it.each([400, 401, 402, 403, 404, 405, 410, 422])(
+    'classifies HTTP %i as fatal',
+    async (status) => {
+      const adapter = Harness.adapter(FakeFetchBoundary.respondingWith(status, {}));
+      expect(adapter.classifyFailure(await Harness.failure(adapter))).toBe('fatal');
+    },
+  );
 
   it('classifies network failure as retryable', async () => {
     const adapter = Harness.adapter(FakeFetchBoundary.failing(new TypeError('fetch failed')));
@@ -85,12 +88,16 @@ describe('OpenRouterAdapter failure classification', () => {
 
 describe('OpenRouterAdapter 200-with-error envelope', () => {
   it('classifies an embedded error with a fatal numeric code as fatal', async () => {
-    const adapter = Harness.adapter(FakeFetchBoundary.respondingWith(200, { error: { code: 401 } }));
+    const adapter = Harness.adapter(
+      FakeFetchBoundary.respondingWith(200, { error: { code: 401 } }),
+    );
     expect(adapter.classifyFailure(await Harness.failure(adapter))).toBe('fatal');
   });
 
   it('classifies an embedded error with a retryable numeric code as retryable', async () => {
-    const adapter = Harness.adapter(FakeFetchBoundary.respondingWith(200, { error: { code: 502 } }));
+    const adapter = Harness.adapter(
+      FakeFetchBoundary.respondingWith(200, { error: { code: 502 } }),
+    );
     expect(adapter.classifyFailure(await Harness.failure(adapter))).toBe('retryable');
   });
 

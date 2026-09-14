@@ -1,4 +1,6 @@
 import { CrucibleError } from '../core/errors.js';
+import { OpenRouterEnvelopeError } from './openrouter-envelope-error.js';
+import { OpenRouterHttpError } from './openrouter-http-error.js';
 import type { CompletionRequest, FailureClass, ProviderAdapter } from './types.js';
 
 const OPENROUTER_COMPLETIONS_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -19,20 +21,6 @@ type ProviderHttpRequestInit = {
 
 type FetchLike = (url: string, init: ProviderHttpRequestInit) => Promise<ProviderHttpResponse>;
 type ApiKeyReader = () => string | undefined;
-
-class OpenRouterHttpError extends Error {
-  constructor(readonly status: number) {
-    super(`OpenRouter responded with HTTP ${status}.`);
-    this.name = 'OpenRouterHttpError';
-  }
-}
-
-class OpenRouterEnvelopeError extends Error {
-  constructor() {
-    super('OpenRouter response envelope did not contain completion text.');
-    this.name = 'OpenRouterEnvelopeError';
-  }
-}
 
 class OpenRouterAdapter implements ProviderAdapter {
   readonly name = 'openrouter';
@@ -88,12 +76,15 @@ class OpenRouterAdapter implements ProviderAdapter {
   }
 
   private serializeRequestBody(request: CompletionRequest): string {
+    const messages =
+      request.system !== undefined
+        ? [
+            { role: 'system', content: request.system },
+            { role: 'user', content: request.prompt },
+          ]
+        : [{ role: 'user', content: request.prompt }];
     try {
-      return JSON.stringify({
-        ...request.meta,
-        model: request.model,
-        messages: [{ role: 'user', content: request.prompt }],
-      });
+      return JSON.stringify({ ...request.meta, model: request.model, messages });
     } catch (cause) {
       throw new CrucibleError('usage', 'Config meta is not JSON-serializable.', { cause });
     }

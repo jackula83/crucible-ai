@@ -10,7 +10,10 @@ import { SleepRecorder } from './test/sleep-recorder.fake.js';
 class Harness {
   static request: CompletionRequest = { model: TestModel.Generic, prompt: 'p' };
 
-  static run(adapter: ProviderAdapter, recorder: SleepRecorder = new SleepRecorder()): Promise<string> {
+  static run(
+    adapter: ProviderAdapter,
+    recorder: SleepRecorder = new SleepRecorder(),
+  ): Promise<string> {
     return new RetryingCompleter(recorder.sleep).complete(
       adapter,
       Harness.request,
@@ -39,7 +42,11 @@ describe('RetryingCompleter', () => {
 
   it('exhausts persistent retryable failures as a retryable infra error', async () => {
     const adapter = new ScriptedAdapter(
-      [{ reject: new Error('first') }, { reject: new Error('second') }, { reject: new Error('third') }],
+      [
+        { reject: new Error('first') },
+        { reject: new Error('second') },
+        { reject: new Error('third') },
+      ],
       'retryable',
     );
     const error = await Harness.failure(adapter);

@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { CrucibleError } from './errors.js';
+import { CONFIG_FILE_NAME } from './config-boundary.js';
+import type { ConfigBoundary, ConfigFileRead } from './config-boundary.js';
+import { FileSystemConfigBoundary } from './file-system-config-boundary.js';
 import { providerRegistry, ProviderRegistry } from '../providers/registry.js';
 import type { ProviderAdapter } from '../providers/types.js';
 
-const CONFIG_FILE_NAME = 'crucible.config.json';
 const VERBOSITY_LEVELS = ['default', 'full', 'debug'] as const;
 const KNOWN_FIELDS = ['provider', 'model', 'meta', 'verbosity'] as const;
 const KEY_LIKE_FIELDS = ['apikey', 'api_key', 'key', 'token', 'secret', 'authorization'] as const;
@@ -17,38 +17,6 @@ type CrucibleConfig = {
   readonly meta?: Readonly<Record<string, unknown>>;
   readonly effectiveVerbosity: Verbosity;
 };
-
-type ConfigFileRead =
-  | { readonly found: true; readonly raw: string }
-  | { readonly found: false; readonly reason: 'missing' | 'unreadable'; readonly detail?: string };
-
-type ConfigBoundary = {
-  describeSource(): string;
-  readConfigFile(): ConfigFileRead;
-  readVerbosityOverride(): string | undefined;
-};
-
-class FileSystemConfigBoundary implements ConfigBoundary {
-  describeSource(): string {
-    return join(process.cwd(), CONFIG_FILE_NAME);
-  }
-
-  readConfigFile(): ConfigFileRead {
-    try {
-      return { found: true, raw: readFileSync(this.describeSource(), 'utf8') };
-    } catch (cause) {
-      if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
-        return { found: false, reason: 'missing' };
-      }
-      const detail = cause instanceof Error ? cause.message : String(cause);
-      return { found: false, reason: 'unreadable', detail };
-    }
-  }
-
-  readVerbosityOverride(): string | undefined {
-    return process.env.CRUCIBLE_VERBOSE;
-  }
-}
 
 class ConfigStore {
   private cached?: CrucibleConfig;
@@ -188,5 +156,5 @@ class ConfigStore {
 
 const config = new ConfigStore(new FileSystemConfigBoundary(), providerRegistry);
 
-export { config, ConfigStore, FileSystemConfigBoundary };
+export { config, ConfigStore };
 export type { ConfigBoundary, ConfigFileRead, CrucibleConfig, Verbosity };

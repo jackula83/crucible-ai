@@ -1,0 +1,7 @@
+dist/
+coverage/
+package-lock.json
+_bmad-output/
+_bmad/
+.claude/
+*.md

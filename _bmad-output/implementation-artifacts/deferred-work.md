@@ -16,6 +16,10 @@
   summary: Extend the coherent conformance fixtures with genuinely ambiguous and adversarial cases (partial reveals, implication-only leaks, multi-fact state conflicts) before publishing GA judge-model guidance (OQ-6) — the current 4-case matrix is deliberately easy and all candidates scored perfectly on it.
   evidence: 60/60 verdicts across three models on the current matrix gives no discrimination between models; docs/judge-models.md flags the same caveat.
 
+- source_spec: `_bmad-output/implementation-artifacts/spec-1-4-first-semantic-verdict-smoke-mode.md`
+  summary: Verify the built artifact's schema loading under CJS and bundler-inlined consumers (import.meta.url package-root walk) in Story 3.3 e2e; and revisit injectGlobals:false Jest support (lazy @jest/globals import) with Story 3.6 docs gotchas.
+  evidence: Review flagged both; the walk depends on tsdown's CJS shim and breaks if a consumer bundler inlines the package; the binding currently requires an injected global `it`.
+
 - source_spec: PR #8 review discussion (2026-09-14)
   summary: When recommended judge-model guidance ships (OQ-6, docs epic), promote a model enum into src as its home — until then model identifiers stay user-supplied config data with the test enum in providers/test/test-model.enum.ts.
   evidence: Jack asked whether the test model enum should be usable by implementation; today src has no consumer for it (FR-7 keeps provider params opaque), but OQ-6's recommended-model docs would create one.
